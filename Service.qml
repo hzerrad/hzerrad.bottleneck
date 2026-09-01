@@ -29,6 +29,7 @@ Item {
   property int diskIoStreak: 0
   property string lastConstraintKey: ""
   property var gpuSample: null
+  property string gpuBackend: "none"
 
   readonly property int historyLen: 120
 
@@ -84,6 +85,46 @@ Item {
     id: dfProc
     command: ["df", "-P", "-T"]
     stdout: StdioCollector { onStreamFinished: root.filesystems = Proc.parseDf(text) }
+  }
+
+  Process {
+    id: gpuDetect
+    running: true
+    command: ["sh", "-c",
+      "command -v nvidia-smi >/dev/null && echo nvidia && exit 0; " +
+      "ls /sys/class/drm/card*/device/gpu_busy_percent >/dev/null 2>&1 && echo amd && exit 0; " +
+      "ls /sys/class/drm/card*/gt_act_freq_mhz >/dev/null 2>&1 && echo intel && exit 0; " +
+      "echo none"]
+    stdout: StdioCollector {
+      onStreamFinished: {
+        root.gpuBackend = text.trim()
+        if (root.gpuBackend === "nvidia") nvidiaProc.running = true
+      }
+    }
+  }
+
+  // One long-lived process rather than a spawn per sample.
+  Process {
+    id: nvidiaProc
+    command: ["nvidia-smi"].concat(Gpu.nvidiaQueryArgs(root.interval))
+    stdout: SplitParser {
+      onRead: function (line) {
+        var g = Gpu.parseNvidiaCsv(line)
+        if (g) root.gpuSample = g
+      }
+    }
+    onExited: {
+      // Never report stale telemetry — absent != zero.
+      root.gpuSample = null
+      gpuRestart.start()
+    }
+  }
+
+  Timer {
+    id: gpuRestart
+    interval: 5000
+    repeat: false
+    onTriggered: if (root.gpuBackend === "nvidia") nvidiaProc.running = true
   }
 
   function pushHistory(key, value) {
