@@ -51,7 +51,7 @@ Item {
     id: discoverProc
     command: ["sh", "-c",
       "for c in /sys/devices/system/cpu/cpu[0-9]*/cpufreq/cpuinfo_max_freq; do " +
-      "n=${c#*/cpu}; n=${n%%/*}; echo \"$n $(cat $c)\"; done"]
+      "n=${c#/sys/devices/system/cpu/cpu}; n=${n%%/*}; echo \"$n $(cat $c)\"; done"]
     stdout: StdioCollector {
       onStreamFinished: {
         var freqs = []
@@ -71,6 +71,33 @@ Item {
     interval: root.interval
     repeat: true
     onTriggered: root.sample()
+  }
+
+  // The coretemp hwmon node and its package input are fixed for the boot.
+  // Runs once and points tempFile at the answer, or cpuTempC stays null.
+  Process {
+    id: tempDetect
+    running: true
+    command: ["sh", "-c",
+      "for h in /sys/class/hwmon/hwmon*; do " +
+      "[ \"$(cat $h/name 2>/dev/null)\" = coretemp ] || continue; " +
+      "for l in $h/temp*_label; do b=${l##*/}; echo \"$h ${b%_label}_input $(cat $l)\"; done; " +
+      "break; done"]
+    stdout: StdioCollector {
+      onStreamFinished: {
+        var labels = []
+        var dir = ""
+        var lines = String(text).trim().split("\n")
+        for (var i = 0; i < lines.length; i++) {
+          var parts = lines[i].trim().split(" ")
+          if (parts.length < 3) continue
+          dir = parts[0]
+          labels.push({ input: parts[1], label: parts.slice(2).join(" ") })
+        }
+        var pick = Proc.pickCoretempInput(labels)
+        if (dir && pick) tempFile.path = dir + "/" + pick
+      }
+    }
   }
 
   // Disk free space changes slowly; polling it at the sample rate is waste.
@@ -155,6 +182,7 @@ Item {
 
   function sample() {
     statFile.reload(); memFile.reload(); diskFile.reload()
+    if (tempFile.path !== "") tempFile.reload()
 
     var stat = Proc.parseStat(statFile.text())
     var mem = Proc.parseMeminfo(memFile.text())

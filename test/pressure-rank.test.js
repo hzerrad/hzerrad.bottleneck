@@ -51,3 +51,33 @@ test("rankConstraint picks the GPU when gaming", () => {
 test("rankConstraint returns null for an empty list", () => {
   assert.equal(P.rankConstraint([]), null)
 })
+
+// Conditions rank for display and can raise anomalies, but never claim to be
+// the constraint.
+test("conditions never become the constraint", () => {
+  const s = Object.assign({}, quiet, {
+    pPct: 2, ePct: 1,
+    gpu: { utilPct: 3, vramUsedMiB: 100, vramTotalMiB: 12282, tempC: 40, watts: 10 },
+    memPct: 5,
+    filesystems: [{ mount: "/", usedPct: 39 }],
+    cpuTempC: 38, gpuTempC: 40
+  })
+  const rs = P.buildResources(s)
+  assert.equal(rs.find(r => r.key === "cputemp").ranks, false)
+  assert.equal(rs.find(r => r.key === "diskspace").ranks, false)
+  const c = P.rankConstraint(rs)
+  assert.ok(c, "a constraint should still be found")
+  assert.ok(!["cputemp", "gputemp", "diskspace"].includes(c.key), "got " + c.key)
+})
+
+test("every resource carries a distinct, non-empty glyph", () => {
+  const rs = P.buildResources(quiet)
+  const seen = {}
+  for (const r of rs) {
+    assert.ok(r.glyph && r.glyph.length > 0, r.key + " has no glyph")
+    // Temps share a glyph, as do RAM/VRAM; the label disambiguates.
+    if (r.key.endsWith("temp") || r.key === "vram" || r.key === "ram") continue
+    assert.ok(!seen[r.glyph], "duplicate glyph on " + r.key)
+    seen[r.glyph] = true
+  }
+})

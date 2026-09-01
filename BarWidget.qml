@@ -95,7 +95,7 @@ BarWidget {
     anchors.centerIn: parent
     rows: root.vertical ? 3 : 1
     columns: root.vertical ? 1 : 3
-    spacing: Style.space(1)
+    spacing: Style.space(5)
     horizontalItemAlignment: Grid.AlignHCenter
     verticalItemAlignment: Grid.AlignVCenter
 
