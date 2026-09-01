@@ -1,6 +1,158 @@
 import QtQuick
+import Quickshell
+import Quickshell.Io
+import "lib/Proc.js" as Proc
+import "lib/Gpu.js" as Gpu
+import "lib/Pressure.js" as Pressure
 
-// Placeholder so `omarchy plugin validate` finds the manifest's service
-// entry point. Replaced by the real sampler.
-QtObject {
+// One sampler for the plugin. keepLoaded mounts it at shell startup and
+// survives the widget being hidden, so history stays continuous.
+Item {
+  id: root
+
+  property int interval: 2000
+  property int calmThreshold: 40
+  property var thresholds: ({ alertTemp: 88, alertGpuTemp: 83, alertDisk: 90, alertVram: 95 })
+
+  property var resources: []
+  property var constraint: null
+  property var anomalies: []
+  property string barStateName: "calm"   // NOT `state` — Item.state already exists
+  property var history: ({})
+  property double since: 0
+
+  property var coreClasses: ({ p: [], e: [] })
+  property var prevStat: null
+  property var prevDisk: null
+  property double prevDiskAt: 0
+  property var swapHistory: []
+  property int diskIoStreak: 0
+  property string lastConstraintKey: ""
+  property var gpuSample: null
+
+  readonly property int historyLen: 120
+
+  FileView { id: statFile;  path: "/proc/stat" }
+  FileView { id: memFile;   path: "/proc/meminfo" }
+  FileView { id: diskFile;  path: "/proc/diskstats" }
+  FileView { id: tempFile;  path: "" }
+
+  Component.onCompleted: discoverTopology()
+
+  // Core classes and sensor paths never change at runtime — discover once.
+  function discoverTopology() {
+    discoverProc.running = true
+  }
+
+  Process {
+    id: discoverProc
+    command: ["sh", "-c",
+      "for c in /sys/devices/system/cpu/cpu[0-9]*/cpufreq/cpuinfo_max_freq; do " +
+      "n=${c#*/cpu}; n=${n%%/*}; echo \"$n $(cat $c)\"; done"]
+    stdout: StdioCollector {
+      onStreamFinished: {
+        var freqs = []
+        var lines = text.trim().split("\n")
+        for (var i = 0; i < lines.length; i++) {
+          var f = lines[i].trim().split(/\s+/)
+          if (f.length === 2) freqs.push({ cpu: parseInt(f[0], 10), khz: parseInt(f[1], 10) })
+        }
+        root.coreClasses = Proc.classifyCores(freqs)
+        tick.start()
+      }
+    }
+  }
+
+  Timer {
+    id: tick
+    interval: root.interval
+    repeat: true
+    onTriggered: root.sample()
+  }
+
+  // Disk free space changes slowly; polling it at the sample rate is waste.
+  Timer {
+    interval: 30000
+    repeat: true
+    running: true
+    triggeredOnStart: true
+    onTriggered: dfProc.running = true
+  }
+
+  property var filesystems: []
+  Process {
+    id: dfProc
+    command: ["df", "-P", "-T"]
+    stdout: StdioCollector { onStreamFinished: root.filesystems = Proc.parseDf(text) }
+  }
+
+  function pushHistory(key, value) {
+    var h = root.history
+    if (!h[key]) h[key] = []
+    h[key].push(value)
+    if (h[key].length > root.historyLen) h[key].shift()
+    root.history = h
+  }
+
+  function sample() {
+    statFile.reload(); memFile.reload(); diskFile.reload()
+
+    var stat = Proc.parseStat(statFile.text())
+    var mem = Proc.parseMeminfo(memFile.text())
+    var disk = Proc.parseDiskstats(diskFile.text())
+    var now = Date.now()
+
+    var pPct = prevStat ? Proc.cpuBusyPct(prevStat, stat, coreClasses.p) : 0
+    var ePct = prevStat ? Proc.cpuBusyPct(prevStat, stat, coreClasses.e) : 0
+
+    var diskIo = []
+    if (prevDisk) {
+      var elapsed = now - prevDiskAt
+      for (var name in disk) {
+        if (!prevDisk[name]) continue
+        diskIo.push({ name: name, utilPct: Proc.diskUtilPct(prevDisk[name].ioTicks, disk[name].ioTicks, elapsed) })
+      }
+    }
+
+    var swapPct = Proc.swapUsedPct(mem)
+    swapHistory.push(swapPct)
+    if (swapHistory.length > 5) swapHistory.shift()
+
+    var saturated = false
+    for (var i = 0; i < diskIo.length; i++) if (diskIo[i].utilPct >= 95) saturated = true
+    diskIoStreak = saturated ? diskIoStreak + 1 : 0
+
+    var sampleObj = {
+      pPct: pPct, ePct: ePct,
+      memPct: Proc.memUsedPct(mem),
+      swapPct: swapPct,
+      gpu: gpuSample,
+      diskIo: diskIo,
+      filesystems: filesystems,
+      cpuTempC: tempFile.path ? Proc.parseMilliC(tempFile.text()) : null,
+      gpuTempC: gpuSample ? gpuSample.tempC : null
+    }
+
+    var flags = {
+      swapGrowing: Proc.swapGrowing(swapHistory, 3),
+      ramCritical: mem.memTotal > 0 && (mem.memAvailable / mem.memTotal) < 0.05,
+      diskIoSaturated: Pressure.debounced(diskIoStreak, 3)
+    }
+
+    resources = Pressure.buildResources(sampleObj)
+    anomalies = Pressure.detectAnomalies(resources, thresholds, flags)
+    constraint = Pressure.rankConstraint(resources)
+    barStateName = Pressure.barState(constraint, anomalies, calmThreshold)
+
+    if (constraint && constraint.key !== lastConstraintKey) {
+      lastConstraintKey = constraint.key
+      since = now
+    }
+
+    for (var j = 0; j < resources.length; j++) pushHistory(resources[j].key, resources[j].pressure)
+
+    prevStat = stat
+    prevDisk = disk
+    prevDiskAt = now
+  }
 }
