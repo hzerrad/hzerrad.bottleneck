@@ -38,3 +38,18 @@ test("parseDf keeps real filesystems and skips virtual ones", () => {
   assert.equal(fsList[0].usedPct, 14)
   assert.equal(fsList[1].mount, "/boot")
 })
+
+// btrfs subvolumes share a device and report identical usage.
+test("parseDf reports one row per device, shortest mount wins", () => {
+  const text = [
+    "Filesystem     Type  1024-blocks      Used Available Capacity Mounted on",
+    "/dev/dm-0      btrfs   960380628 122334124 789293932      39% /var/cache/pacman/pkg",
+    "/dev/dm-0      btrfs   960380628 122334124 789293932      39% /",
+    "/dev/dm-0      btrfs   960380628 122334124 789293932      39% /home",
+    "/dev/nvme0n1p1 vfat      1046512    296288    750224      28% /boot"
+  ].join("\n")
+  const fs = Proc.parseDf(text)
+  assert.equal(fs.length, 2, "one row per device")
+  assert.equal(fs[0].mount, "/")
+  assert.equal(fs[1].mount, "/boot")
+})

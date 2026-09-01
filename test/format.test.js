@@ -27,3 +27,14 @@ test("duration reads as elapsed time", () => {
   assert.equal(F.duration(95000), "1m35s")
   assert.equal(F.duration(3700000), "1h1m")
 })
+
+test("bytes scales to GB", () => {
+  assert.equal(F.bytes(512), "512 B")
+  assert.equal(F.bytes(33464700928), "31.2 GB")
+})
+
+test("ago reads as event age", () => {
+  assert.equal(F.ago(1000), "now")
+  assert.equal(F.ago(45000), "45s ago")
+  assert.equal(F.ago(120000), "2m ago")
+})

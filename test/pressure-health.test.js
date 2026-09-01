@@ -53,3 +53,22 @@ test("barState escalates with load and anomalies", () => {
   assert.equal(P.barState(r("pcore", 0.05), [r("cputemp", 0.91)], 40), "anomaly")
   assert.equal(P.barState(null, [], 40), "calm")
 })
+
+// Pinned at 90% for a minute is one spike, not thirty.
+test("spikeOnsets fires on the crossing, not on every sample above it", () => {
+  const hot = [r("pcore", 0.92), r("gpu", 0.30)]
+  assert.deepEqual(P.spikeOnsets({}, hot, 70).map(x => x.key), ["pcore"])
+  assert.deepEqual(P.spikeOnsets({ pcore: 0.92 }, hot, 70).map(x => x.key), [])
+  assert.deepEqual(P.spikeOnsets({ pcore: 0.40 }, hot, 70).map(x => x.key), ["pcore"])
+})
+
+test("spikeOnsets ignores conditions", () => {
+  const temp = Object.assign(r("cputemp", 0.95), { ranks: false })
+  assert.deepEqual(P.spikeOnsets({}, [temp], 70), [])
+})
+
+test("pressureByKey snapshots the current pressures", () => {
+  const m = P.pressureByKey([r("gpu", 0.5), r("ram", 0.25)])
+  assert.equal(m.gpu, 0.5)
+  assert.equal(m.ram, 0.25)
+})

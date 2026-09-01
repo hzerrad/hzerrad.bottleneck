@@ -35,6 +35,24 @@ Item {
 
   readonly property int historyLen: 120
 
+  // Detail state (expanded panel)
+  property bool panelOpen: false          // panel sets this; gates costly work
+  property string procSort: "cpu"         // cpu | mem | gpu
+  property var physicalCores: []          // [{coreId, kind, threads}]
+  property var coreStats: []              // [{coreId, kind, busyPct, tempC}]
+  property var coreTempMap: ({})          // coreId -> hwmon input filename
+  property string coreTempDir: ""
+  property var memInfo: ({})              // raw byte counts for absolute display
+  property var procs: []                  // top processes by cpu/mem
+  property var gpuProcs: []               // per-process GPU from nvidia-smi pmon
+
+  // Spike log
+  property int spikeThreshold: 70
+  property var spikes: []                 // newest first
+  property var prevPressures: ({})
+  readonly property int spikeLogLen: 12
+  property var pendingSpike: null
+
   FileView { id: statFile;  path: "/proc/stat" }
   FileView { id: memFile;   path: "/proc/meminfo" }
   FileView { id: diskFile;  path: "/proc/diskstats" }
@@ -61,7 +79,22 @@ Item {
           if (f.length === 2) freqs.push({ cpu: parseInt(f[0], 10), khz: parseInt(f[1], 10) })
         }
         root.coreClasses = Proc.classifyCores(freqs)
+        topoProc.running = true
         tick.start()
+      }
+    }
+  }
+
+  // A hyperthread pair shares one core and one sensor, so fold threads back.
+  Process {
+    id: topoProc
+    command: ["sh", "-c",
+      "for c in /sys/devices/system/cpu/cpu[0-9]*/topology/core_id; do " +
+      "n=${c#/sys/devices/system/cpu/cpu}; n=${n%%/*}; echo \"$n $(cat $c)\"; done"]
+    stdout: StdioCollector {
+      onStreamFinished: {
+        var topo = Proc.parseCoreTopology(text)
+        root.physicalCores = Proc.groupPhysicalCores(topo, root.coreClasses)
       }
     }
   }
@@ -96,6 +129,8 @@ Item {
         }
         var pick = Proc.pickCoretempInput(labels)
         if (dir && pick) tempFile.path = dir + "/" + pick
+        root.coreTempDir = dir
+        root.coreTempMap = Proc.parseCoretempMap(labels)
       }
     }
   }
@@ -172,6 +207,132 @@ Item {
     notifiedKeys = seen
   }
 
+  // Spike capture
+  // A crossing arms a one-shot `ps` — that is when the culprit is still
+  // running — and its result is attached to the event.
+  function recordSpike(resource) {
+    pendingSpike = {
+      at: Date.now(),
+      key: resource.key,
+      label: resource.label,
+      glyph: resource.glyph,
+      display: resource.display,
+      culprit: ""
+    }
+    spikeCulpritProc.running = true
+  }
+
+  function commitSpike(culprit) {
+    if (!pendingSpike) return
+    var e = pendingSpike
+    e.culprit = culprit
+    pendingSpike = null
+    var next = [e].concat(spikes)
+    if (next.length > spikeLogLen) next = next.slice(0, spikeLogLen)
+    spikes = next
+  }
+
+  Process {
+    id: spikeCulpritProc
+    command: ["sh", "-c", "ps -eo pid,comm,pcpu,pmem --sort=-pcpu --no-headers | head -3"]
+    stdout: StdioCollector {
+      onStreamFinished: {
+        var list = Proc.parsePsList(text)
+        var parts = []
+        for (var i = 0; i < list.length && i < 2; i++) {
+          parts.push(list[i].name + " " + Math.round(list[i].cpuPct) + "%")
+        }
+        root.commitSpike(parts.join(", "))
+      }
+    }
+  }
+
+  // Detail sampling
+  // Runs only while the panel is open; idle cost is zero.
+  Timer {
+    id: detailTick
+    interval: 2000
+    repeat: true
+    running: root.panelOpen
+    triggeredOnStart: true
+    onTriggered: {
+      procProc.running = true
+      if (root.coreTempDir !== "") coreTempProc.running = true
+      if (root.gpuBackend === "nvidia") gpuProcProc.running = true
+    }
+  }
+
+  Process {
+    id: procProc
+    command: ["sh", "-c",
+      "ps -eo pid,comm,pcpu,pmem --sort=-" +
+      (root.procSort === "mem" ? "pmem" : "pcpu") +
+      " --no-headers | head -40"]
+    stdout: StdioCollector {
+      onStreamFinished: {
+        root.procs = Proc.aggregateByName(Proc.parsePsList(text),
+          root.procSort === "mem" ? "memPct" : "cpuPct")
+      }
+    }
+  }
+
+  Process {
+    id: gpuProcProc
+    command: ["sh", "-c", "nvidia-smi pmon -c 1 2>/dev/null"]
+    stdout: StdioCollector {
+      onStreamFinished: {
+        var list = Proc.parsePmon(text)
+        list.sort(function (a, b) { return (b.smPct - a.smPct) || (b.memPct - a.memPct) })
+        root.gpuProcs = list.slice(0, 8)
+      }
+    }
+  }
+
+  // One spawn reads every core sensor, rather than one FileView per core.
+  Process {
+    id: coreTempProc
+    command: ["sh", "-c", root.coreTempCommand]
+    stdout: StdioCollector {
+      onStreamFinished: {
+        var m = {}
+        var lines = String(text).trim().split("\n")
+        for (var i = 0; i < lines.length; i++) {
+          var f = lines[i].trim().split(/\s+/)
+          if (f.length !== 2) continue
+          var c = parseInt(f[0], 10)
+          var t = Proc.parseMilliC(f[1])
+          if (!isNaN(c) && t !== null) m[c] = t
+        }
+        root.coreTemps = m
+      }
+    }
+  }
+
+  property var coreTemps: ({})
+  readonly property string coreTempCommand: {
+    if (coreTempDir === "") return "true"
+    var parts = []
+    for (var id in coreTempMap) parts.push("echo \"" + id + " $(cat " + coreTempDir + "/" + coreTempMap[id] + ")\"")
+    return parts.length ? parts.join("; ") : "true"
+  }
+
+  function refreshCoreStats(prev, curr) {
+    if (!physicalCores.length) return
+    var out = []
+    for (var i = 0; i < physicalCores.length; i++) {
+      var c = physicalCores[i]
+      out.push({
+        coreId: c.coreId,
+        name: c.name,
+        threads: c.threads.length,
+        kind: c.kind,
+        busyPct: prev ? Proc.cpuBusyPct(prev, curr, c.threads) : 0,
+        tempC: coreTemps[c.coreId] !== undefined ? coreTemps[c.coreId] : null
+      })
+    }
+    coreStats = out
+  }
+
   function pushHistory(key, value) {
     var h = root.history
     if (!h[key]) h[key] = []
@@ -237,6 +398,16 @@ Item {
     }
 
     notifyOnsets()
+
+    // Detected every sample, open or not — the point is catching what you missed.
+    if (!pendingSpike) {
+      var onsets = Pressure.spikeOnsets(prevPressures, resources, spikeThreshold)
+      if (onsets.length) recordSpike(onsets[0])
+    }
+    prevPressures = Pressure.pressureByKey(resources)
+
+    memInfo = mem
+    if (panelOpen) refreshCoreStats(prevStat, stat)
 
     for (var j = 0; j < resources.length; j++) pushHistory(resources[j].key, resources[j].pressure)
 
