@@ -55,8 +55,25 @@ BarWidget {
   function close() { if (panelLoader.item && panelLoader.item.close) panelLoader.item.close() }
   readonly property bool opened: panelLoader.item ? panelLoader.item.opened === true : false
 
-  onBarChanged: injectPanel()
-  onSettingsChanged: injectPanel()
+  // ensureService() injects only omarchyPath, never settings, so the widget
+  // pushes config down. Without this every key but detailCommand is inert.
+  function pushConfig() {
+    if (!svc) return
+    svc.interval = setting("interval", 2000)
+    svc.calmThreshold = setting("calmThreshold", 40)
+    svc.notifications = setting("notifications", false)
+    svc.thresholds = {
+      alertTemp: setting("alertTemp", 88),
+      alertGpuTemp: setting("alertGpuTemp", 83),
+      alertDisk: setting("alertDisk", 90),
+      alertVram: setting("alertVram", 95)
+    }
+  }
+
+  onBarChanged: { injectPanel(); pushConfig() }
+  onSettingsChanged: { injectPanel(); pushConfig() }
+  onSvcChanged: pushConfig()
+  Component.onCompleted: pushConfig()
 
   implicitWidth: root.vertical ? barSize : content.implicitWidth + Style.space(4)
   implicitHeight: root.vertical ? content.implicitHeight + Style.space(4) : barSize

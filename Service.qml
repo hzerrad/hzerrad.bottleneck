@@ -30,6 +30,8 @@ Item {
   property string lastConstraintKey: ""
   property var gpuSample: null
   property string gpuBackend: "none"
+  property bool notifications: false
+  property var notifiedKeys: ({})
 
   readonly property int historyLen: 120
 
@@ -127,6 +129,22 @@ Item {
     onTriggered: if (root.gpuBackend === "nvidia") nvidiaProc.running = true
   }
 
+  // One notification per anomaly onset, not per sample. The key clears when
+  // the anomaly ends so a genuine recurrence fires again.
+  function notifyOnsets() {
+    var seen = {}
+    var i
+    for (i = 0; i < anomalies.length; i++) {
+      var a = anomalies[i]
+      seen[a.key] = true
+      if (notifications && !notifiedKeys[a.key]) {
+        Quickshell.execDetached(["omarchy-notification-send", "Vitals",
+          a.label + " " + a.display])
+      }
+    }
+    notifiedKeys = seen
+  }
+
   function pushHistory(key, value) {
     var h = root.history
     if (!h[key]) h[key] = []
@@ -189,6 +207,8 @@ Item {
       lastConstraintKey = constraint.key
       since = now
     }
+
+    notifyOnsets()
 
     for (var j = 0; j < resources.length; j++) pushHistory(resources[j].key, resources[j].pressure)
 
