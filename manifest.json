@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "id": "hzerrad.vitals",
+  "name": "Vitals",
+  "version": "1.0.0",
+  "author": "hzerrad",
+  "description": "Shows the resource currently limiting your machine, not a wall of numbers.",
+  "kinds": ["service", "bar-widget"],
+  "keepLoaded": true,
+  "entryPoints": {
+    "service": "Service.qml",
+    "barWidget": "BarWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "Vitals",
+    "description": "The resource currently limiting your machine.",
+    "category": "System",
+    "aliases": ["cpu", "gpu", "memory", "monitor", "sysmon", "vitals", "bottleneck"],
+    "defaultSection": "right",
+    "allowMultiple": false,
+    "defaults": {
+      "interval": 2000,
+      "calmThreshold": 40,
+      "alertTemp": 88,
+      "alertGpuTemp": 83,
+      "alertDisk": 90,
+      "alertVram": 95,
+      "detailCommand": "btop",
+      "notifications": false
+    }
+  }
+}

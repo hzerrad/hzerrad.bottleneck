@@ -1,0 +1,5 @@
+{
+  "name": "hzerrad-vitals",
+  "private": true,
+  "scripts": { "test": "node --test test/" }
+}
