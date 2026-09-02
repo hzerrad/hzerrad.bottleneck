@@ -21,6 +21,7 @@
     "defaults": {
       "interval": 2000,
       "calmThreshold": 40,
+      "spikeThreshold": 70,
       "alertTemp": 88,
       "alertGpuTemp": 83,
       "alertDisk": 90,

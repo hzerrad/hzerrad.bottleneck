@@ -29,6 +29,7 @@ Set in `shell.json`, or with `omarchy bar set hzerrad.vitals <key> <value>`.
 |---|---|---|
 | `interval` | `2000` | Sampler tick rate, ms |
 | `calmThreshold` | `40` | Pressure % below which the bar goes bare |
+| `spikeThreshold` | `70` | Pressure % a resource must cross up through to log a spike |
 | `alertTemp` | `88` | CPU temperature anomaly threshold, °C |
 | `alertGpuTemp` | `83` | GPU temperature anomaly threshold, °C |
 | `alertDisk` | `90` | Disk usage anomaly threshold, % |
