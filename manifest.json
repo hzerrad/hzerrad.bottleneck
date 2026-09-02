@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "hzerrad.vitals",
   "name": "Vitals",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "author": "hzerrad",
   "description": "Shows the resource currently limiting your machine, not a wall of numbers.",
   "kinds": ["service", "bar-widget"],

@@ -50,13 +50,17 @@ and VRAM stay out of the ranking.
 Per-process GPU attribution in the panel comes from `nvidia-smi pmon`, which
 has no sysfs equivalent, so that column stays NVIDIA-only.
 
+Only the NVIDIA path has run on real hardware. AMD and Intel are implemented
+and unit-tested against captured sysfs output, but no one has yet run either on
+an actual card. If you have one, what the panel shows is worth reporting.
+
 P/E core classification uses `cpuinfo_max_freq`; on a non-hybrid chip every
 core lands in one class.
 
 ## Install
 
 ```bash
-omarchy plugin add hzerrad.vitals ~/Projects/hzerrad.vitals
+omarchy plugin add https://github.com/hzerrad/hzerrad.vitals.git
 omarchy plugin enable hzerrad.vitals --section right
 ```
 
@@ -65,3 +69,7 @@ omarchy plugin enable hzerrad.vitals --section right
 ```bash
 node --test test/
 ```
+
+## License
+
+MIT. See [LICENSE](LICENSE).
