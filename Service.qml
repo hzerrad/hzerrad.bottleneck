@@ -191,6 +191,19 @@ Item {
     onTriggered: if (root.gpuBackend === "nvidia") nvidiaProc.running = true
   }
 
+  // amdgpu and i915 are sysfs reads, so they ride the main tick as one spawn
+  // rather than a long-lived stream.
+  Process {
+    id: sysfsGpuProc
+    command: ["sh", "-c", root.gpuBackend === "intel" ? Gpu.intelSampleCommand() : Gpu.amdSampleCommand()]
+    stdout: StdioCollector {
+      onStreamFinished: {
+        var kv = Gpu.parseSysfsKv(text)
+        root.gpuSample = root.gpuBackend === "intel" ? Gpu.intelSample(kv) : Gpu.amdSample(kv)
+      }
+    }
+  }
+
   // One notification per anomaly onset, not per sample. The key clears when
   // the anomaly ends so a genuine recurrence fires again.
   function notifyOnsets() {
@@ -344,6 +357,7 @@ Item {
   function sample() {
     statFile.reload(); memFile.reload(); diskFile.reload()
     if (tempFile.path !== "") tempFile.reload()
+    if (gpuBackend === "amd" || gpuBackend === "intel") sysfsGpuProc.running = true
 
     var stat = Proc.parseStat(statFile.text())
     var mem = Proc.parseMeminfo(memFile.text())

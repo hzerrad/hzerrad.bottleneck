@@ -1,0 +1,5 @@
+busy 42
+vram_used 2264924160
+vram_total 8573157376
+temp 54000
+power 45000000

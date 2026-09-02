@@ -40,9 +40,15 @@ Set in `shell.json`, or with `omarchy bar set hzerrad.vitals <key> <value>`.
 ## GPU support
 
 NVIDIA reads from one persistent `nvidia-smi --loop-ms` process; if it exits,
-telemetry is dropped rather than left stale and restarted after 5s. AMD and
-Intel are detected but not sampled yet, so on those cards GPU and VRAM stay out
-of the ranking, as they do with no GPU at all.
+telemetry is dropped rather than left stale and restarted after 5s. AMD reads
+amdgpu sysfs on each tick: `gpu_busy_percent`, `mem_info_vram_used/total`, and
+hwmon temperature and power. Intel reads i915 clocks and derives utilisation
+from `gt_act_freq_mhz / gt_max_freq_mhz`, which is a proxy rather than a
+measurement; VRAM is absent unless the card exposes it. With no backend, GPU
+and VRAM stay out of the ranking.
+
+Per-process GPU attribution in the panel comes from `nvidia-smi pmon`, which
+has no sysfs equivalent, so that column stays NVIDIA-only.
 
 P/E core classification uses `cpuinfo_max_freq`; on a non-hybrid chip every
 core lands in one class.
