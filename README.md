@@ -64,6 +64,32 @@ omarchy plugin add https://github.com/hzerrad/hzerrad.vitals.git
 omarchy plugin enable hzerrad.vitals --section right
 ```
 
+## Removing
+
+```bash
+omarchy plugin remove hzerrad.vitals
+```
+
+That unregisters the widget and deletes the plugin directory. Widget settings
+live under `bar` in `~/.config/omarchy/shell.json`; the plugin never writes
+anywhere else and never edits configuration you did not change yourself.
+
+## Requirements
+
+Sampling reads `/proc` and `/sys` directly, so the core needs nothing
+installed. The rest:
+
+| Command | Used for | Needed |
+|---|---|---|
+| `sh`, `cat` | reading sysfs in a single spawn per tick | always |
+| `df` | filesystem usage | always |
+| `ps` | top processes and spike attribution | only while the panel is open |
+| `nvidia-smi` | NVIDIA telemetry and per-process GPU | NVIDIA cards only |
+| `btop` | default right-click target, changeable via `detailCommand` | optional |
+
+All of these ship with Omarchy except `nvidia-smi`, which comes with the
+NVIDIA driver. AMD and Intel are read from sysfs and need no tooling.
+
 ## Tests
 
 ```bash
