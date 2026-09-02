@@ -5,7 +5,7 @@
   "version": "0.1.0",
   "author": "hzerrad",
   "license": "MIT",
-  "description": "Shows the resource currently limiting your machine, not a wall of numbers.",
+  "description": "Shows which system resource is closest to its limit, and flags any that cross a health threshold.",
   "kinds": ["service", "bar-widget"],
   "keepLoaded": true,
   "entryPoints": {
@@ -14,7 +14,7 @@
   },
   "barWidget": {
     "displayName": "Vitals",
-    "description": "The resource currently limiting your machine.",
+    "description": "The resource currently closest to its limit.",
     "category": "System",
     "aliases": ["cpu", "gpu", "memory", "monitor", "sysmon", "vitals", "bottleneck"],
     "defaultSection": "right",

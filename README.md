@@ -1,7 +1,7 @@
 # Vitals
 
-An Omarchy bar widget that shows the one resource currently limiting your
-machine, rather than a wall of numbers.
+An Omarchy bar widget that shows which system resource is closest to its
+limit.
 
 It samples ten resources (P-cores, E-cores, GPU, VRAM, RAM, swap, disk I/O,
 disk space, CPU temp, GPU temp) and ranks them by pressure: how close each one
