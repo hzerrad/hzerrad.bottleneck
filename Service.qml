@@ -213,7 +213,7 @@ Item {
       var a = anomalies[i]
       seen[a.key] = true
       if (notifications && !notifiedKeys[a.key]) {
-        Quickshell.execDetached(["omarchy-notification-send", "Vitals",
+        Quickshell.execDetached(["omarchy-notification-send", "Bottleneck",
           a.label + " " + a.display])
       }
     }

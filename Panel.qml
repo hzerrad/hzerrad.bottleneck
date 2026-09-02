@@ -9,8 +9,8 @@ import "lib/Format.js" as Format
 // the KeyboardPanel below, bound to `open: root.opened`.
 Panel {
   id: root
-  moduleName: "hzerrad.vitals"
-  ipcTarget: "hzerrad.vitals"
+  moduleName: "hzerrad.bottleneck"
+  ipcTarget: "hzerrad.bottleneck"
 
   // The bar identifies a panel by its slot widget, so hand over the host.
   property var anchorItem: null
@@ -30,7 +30,7 @@ Panel {
     onTriggered: root.nowMs = Date.now()
   }
 
-  readonly property var svc: bar && bar.shell ? bar.shell.serviceFor("hzerrad.vitals") : null
+  readonly property var svc: bar && bar.shell ? bar.shell.serviceFor("hzerrad.bottleneck") : null
   readonly property var constraint: svc ? svc.constraint : null
   readonly property var anomalies: svc ? svc.anomalies : []
   readonly property var gpu: svc ? svc.gpuSample : null

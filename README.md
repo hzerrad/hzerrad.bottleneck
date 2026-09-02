@@ -1,4 +1,4 @@
-# Vitals
+# Bottleneck
 
 An Omarchy bar widget that shows which system resource is closest to its
 limit.
@@ -23,7 +23,7 @@ Left-click opens the detail panel. Right-click runs `detailCommand`.
 
 ## Settings
 
-Set in `shell.json`, or with `omarchy bar set hzerrad.vitals <key> <value>`.
+Set in `shell.json`, or with `omarchy bar set hzerrad.bottleneck <key> <value>`.
 
 | Setting | Default | Meaning |
 |---|---|---|
@@ -60,14 +60,14 @@ core lands in one class.
 ## Install
 
 ```bash
-omarchy plugin add https://github.com/hzerrad/hzerrad.vitals.git
-omarchy plugin enable hzerrad.vitals --section right
+omarchy plugin add https://github.com/hzerrad/hzerrad.bottleneck.git
+omarchy plugin enable hzerrad.bottleneck --section right
 ```
 
 ## Removing
 
 ```bash
-omarchy plugin remove hzerrad.vitals
+omarchy plugin remove hzerrad.bottleneck
 ```
 
 That unregisters the widget and deletes the plugin directory. Widget settings

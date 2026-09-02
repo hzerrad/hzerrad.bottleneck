@@ -1,5 +1,5 @@
 {
-  "name": "hzerrad-vitals",
+  "name": "hzerrad-bottleneck",
   "private": true,
   "scripts": { "test": "node --test test/" }
 }

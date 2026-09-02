@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "id": "hzerrad.vitals",
-  "name": "Vitals",
+  "id": "hzerrad.bottleneck",
+  "name": "Bottleneck",
   "version": "0.1.0",
   "author": "hzerrad",
   "license": "MIT",
@@ -13,7 +13,7 @@
     "barWidget": "BarWidget.qml"
   },
   "barWidget": {
-    "displayName": "Vitals",
+    "displayName": "Bottleneck",
     "description": "The resource currently closest to its limit.",
     "category": "System",
     "aliases": ["cpu", "gpu", "memory", "monitor", "sysmon", "vitals", "bottleneck"],

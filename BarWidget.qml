@@ -8,30 +8,30 @@ import "lib/Format.js" as Format
 // Footprint grows with what there is to say; at rest, a bare texture strip.
 BarWidget {
   id: root
-  moduleName: "hzerrad.vitals"
+  moduleName: "hzerrad.bottleneck"
 
   // No QML singleton — the shell hands the service out by id, so null-guard.
-  readonly property var svc: bar && bar.shell ? bar.shell.serviceFor("hzerrad.vitals") : null
+  readonly property var svc: bar && bar.shell ? bar.shell.serviceFor("hzerrad.bottleneck") : null
 
   readonly property string detailCommand: setting("detailCommand", "btop")
 
-  // `vitalsState`, not `state` — shadowing Item.state breaks QML states.
-  readonly property string vitalsState: svc ? svc.barStateName : "calm"
+  // `widgetState`, not `state` — shadowing Item.state breaks QML states.
+  readonly property string widgetState: svc ? svc.barStateName : "calm"
   readonly property var constraint: svc ? svc.constraint : null
-  readonly property bool showReadout: vitalsState !== "calm"
+  readonly property bool showReadout: widgetState !== "calm"
 
   // The bar injects theme colours; Color.* is the outside-a-bar fallback.
   readonly property color baseTone: bar ? bar.barForeground : Color.foreground
   readonly property color urgentTone: bar ? bar.urgent : Color.urgent
-  readonly property color tone: vitalsState === "anomaly" ? urgentTone
-    : vitalsState === "strained" ? baseTone
+  readonly property color tone: widgetState === "anomaly" ? urgentTone
+    : widgetState === "strained" ? baseTone
     : Qt.rgba(baseTone.r, baseTone.g, baseTone.b, 0.55)
 
   readonly property var pulseValues: (svc && constraint && svc.history[constraint.key])
     ? svc.history[constraint.key] : []
 
   readonly property string tooltipLine: {
-    if (!constraint) return "Vitals — nothing under pressure"
+    if (!constraint) return "Bottleneck — nothing under pressure"
     var parts = [constraint.label + " " + constraint.display]
     if (constraint.key === "vram" && svc && svc.gpuSample) {
       parts.push(Format.mib(svc.gpuSample.vramUsedMiB) + " / " + Format.mib(svc.gpuSample.vramTotalMiB))
