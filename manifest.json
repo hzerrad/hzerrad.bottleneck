@@ -4,6 +4,7 @@
   "name": "Vitals",
   "version": "0.1.0",
   "author": "hzerrad",
+  "license": "MIT",
   "description": "Shows the resource currently limiting your machine, not a wall of numbers.",
   "kinds": ["service", "bar-widget"],
   "keepLoaded": true,
@@ -28,6 +29,17 @@
       "alertVram": 95,
       "detailCommand": "btop",
       "notifications": false
-    }
+    },
+    "schema": [
+      { "key": "interval", "type": "integer", "label": "Sample interval (ms)", "min": 500, "max": 10000, "step": 250, "defaultValue": 2000, "description": "How often /proc, /sys and GPU telemetry are read." },
+      { "key": "calmThreshold", "type": "integer", "label": "Calm below (%)", "min": 0, "max": 100, "step": 5, "defaultValue": 40, "description": "Pressure below which the bar shows only a sparkline, with no glyph or digits." },
+      { "key": "spikeThreshold", "type": "integer", "label": "Log a spike at (%)", "min": 0, "max": 100, "step": 5, "defaultValue": 70, "description": "Pressure a resource must cross upward before the panel records a spike and captures the processes responsible." },
+      { "key": "alertTemp", "type": "integer", "label": "CPU temperature alert (°C)", "min": 50, "max": 110, "step": 1, "defaultValue": 88 },
+      { "key": "alertGpuTemp", "type": "integer", "label": "GPU temperature alert (°C)", "min": 50, "max": 110, "step": 1, "defaultValue": 83 },
+      { "key": "alertDisk", "type": "integer", "label": "Disk usage alert (%)", "min": 50, "max": 100, "step": 1, "defaultValue": 90 },
+      { "key": "alertVram", "type": "integer", "label": "VRAM usage alert (%)", "min": 50, "max": 100, "step": 1, "defaultValue": 95 },
+      { "key": "notifications", "type": "boolean", "label": "Desktop notifications", "defaultValue": false, "description": "Notify once when an anomaly starts, not on every sample." },
+      { "key": "detailCommand", "type": "string", "label": "Right-click command", "defaultValue": "btop", "description": "Launched when the widget is right-clicked." }
+    ]
   }
 }
