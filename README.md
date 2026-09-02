@@ -85,10 +85,15 @@ installed. The rest:
 | `df` | filesystem usage | always |
 | `ps` | top processes and spike attribution | only while the panel is open |
 | `nvidia-smi` | NVIDIA telemetry and per-process GPU | NVIDIA cards only |
+| `omarchy-notification-send` | anomaly notifications | only when `notifications` is on |
 | `btop` | default right-click target, changeable via `detailCommand` | optional |
 
 All of these ship with Omarchy except `nvidia-smi`, which comes with the
 NVIDIA driver. AMD and Intel are read from sysfs and need no tooling.
+
+Every command above is read-only. The plugin writes no files and changes no
+configuration; its own settings live under `bar` in `shell.json` and are
+written only by you, through the settings panel or `omarchy bar set`.
 
 ## Tests
 
