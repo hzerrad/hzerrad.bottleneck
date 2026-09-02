@@ -39,9 +39,9 @@ Set in `shell.json`, or with `omarchy bar set hzerrad.vitals <key> <value>`.
 ## GPU support
 
 NVIDIA reads from one persistent `nvidia-smi --loop-ms` process; if it exits,
-telemetry is dropped rather than left stale and restarted after 5s. AMD uses
-`gpu_busy_percent`, Intel `gt_act_freq_mhz`. With no backend, GPU and VRAM are
-absent from the ranking.
+telemetry is dropped rather than left stale and restarted after 5s. AMD and
+Intel are detected but not sampled yet, so on those cards GPU and VRAM stay out
+of the ranking, as they do with no GPU at all.
 
 P/E core classification uses `cpuinfo_max_freq`; on a non-hybrid chip every
 core lands in one class.
