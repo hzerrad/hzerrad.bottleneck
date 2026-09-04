@@ -24,7 +24,10 @@ BarWidget {
   // The bar injects theme colours; Color.* is the outside-a-bar fallback.
   readonly property color baseTone: bar ? bar.barForeground : Color.foreground
   readonly property color urgentTone: bar ? bar.urgent : Color.urgent
-  readonly property string band: svc && constraint ? svc.bandOf(constraint) : "calm"
+  // barState and bandFor are the same rule at different scopes — same
+  // thresholds, anomaly first in both — so the bar's colour and its
+  // readout cannot disagree if they read from one source.
+  readonly property string band: widgetState === "anomaly" ? "alarm" : widgetState
 
   // Calm dims the bar's own foreground rather than using Color.muted: the bar
   // draws over the user's wallpaper, where muted is not reliably legible.
