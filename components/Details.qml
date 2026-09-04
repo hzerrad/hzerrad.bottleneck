@@ -66,6 +66,17 @@ Column {
 
   readonly property var spikeRows: (svc && svc.spikes) ? svc.spikes.slice(0, 6) : []
 
+  // Hoisted for the same reason gpuName/fullestFs/procRows are: every other
+  // computed value in this file is a root-level property, not a per-render
+  // scan buried in a Text binding.
+  readonly property string cpuTempDisplay: {
+    if (!svc || !svc.resources) return ""
+    for (var i = 0; i < svc.resources.length; i++) {
+      if (svc.resources[i].key === "cputemp") return svc.resources[i].display
+    }
+    return ""
+  }
+
   // ---------------------------------------------------------------- Now
   Column {
     width: parent.width
@@ -95,32 +106,26 @@ Column {
       Text {
         anchors.right: parent.right
         visible: text !== ""
-        text: {
-          if (!root.svc) return ""
-          for (var i = 0; i < root.svc.resources.length; i++) {
-            if (root.svc.resources[i].key === "cputemp") return root.svc.resources[i].display
-          }
-          return ""
-        }
+        text: root.cpuTempDisplay
         color: Color.muted
         font.family: Style.font.family
         font.pixelSize: Style.font.bodySmall
       }
     }
 
+    // A thread count, not the P/E utilisation the overview already shows two
+    // inches above — this line is identity, not load. coreClasses.p/.e hold
+    // logical CPU indices, so the count includes hyperthreads. A non-hybrid
+    // CPU has no e list worth naming, so the row disappears rather than
+    // reporting a hollow "E-cores 0%".
     Text {
       width: parent.width
+      visible: text !== ""
       text: {
-        if (!root.svc) return ""
-        var p = null
-        var e = null
-        for (var i = 0; i < root.svc.resources.length; i++) {
-          if (root.svc.resources[i].key === "pcore") p = root.svc.resources[i]
-          if (root.svc.resources[i].key === "ecore") e = root.svc.resources[i]
-        }
-        var out = p ? "P-cores " + p.display : ""
-        if (e) out += (out ? "    " : "") + "E-cores " + e.display
-        return out
+        if (!root.svc || !root.svc.coreClasses) return ""
+        var n = (root.svc.coreClasses.p ? root.svc.coreClasses.p.length : 0)
+              + (root.svc.coreClasses.e ? root.svc.coreClasses.e.length : 0)
+        return n > 0 ? n + " threads" : ""
       }
       color: Color.muted
       font.family: Style.font.family
@@ -144,7 +149,7 @@ Column {
 
       Text {
         anchors.right: parent.right
-        visible: root.gpu !== null && root.gpu.watts !== undefined
+        visible: root.gpu !== null && root.gpu.watts !== null
         text: root.gpu ? Format.watts(root.gpu.watts) : ""
         color: Color.muted
         font.family: Style.font.family
@@ -152,15 +157,20 @@ Column {
       }
     }
 
+    // VRAM and temperature are read from independently-guarded sysfs files
+    // (lib/Gpu.js), so a card can report one without the other. The row
+    // stays up if either is known; each half is gated on its own value so
+    // neither can borrow the other's visibility.
     Item {
       width: parent.width
       height: vramText.implicitHeight
-      visible: root.gpu !== null && root.gpu.vramTotalMiB > 0
+      visible: root.gpu !== null && (root.gpu.vramTotalMiB > 0 || root.gpu.tempC !== null)
 
       Text {
         id: vramText
         anchors.left: parent.left
-        text: root.gpu
+        visible: root.gpu !== null && root.gpu.vramTotalMiB > 0
+        text: (root.gpu && root.gpu.vramTotalMiB > 0)
           ? "VRAM " + Format.mib(root.gpu.vramUsedMiB) + " of " + Format.mib(root.gpu.vramTotalMiB)
           : ""
         color: Color.muted
