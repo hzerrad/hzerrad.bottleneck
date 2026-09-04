@@ -32,7 +32,7 @@ about 90% of the CPU in use, climbing for 16s          50%
 Now
   CPU    Core i9-11900K                            46°C
          P-cores ████████░░░░  50%   E-cores ░░  2%
-  GPU    RTX 4070 Ti                       42 W of 284 W
+  GPU    RTX 4070 Ti                               42 W
          VRAM 1.1 of 16.0 GB                       50°C
   RAM    12.6 of 31.1 GB              swap 0 of 62.3 GB
   Disk   130 of 930 GB on /                    3 others
@@ -62,13 +62,16 @@ whether another VM fits, and `12.6 of 31.1 GB` does.
 | Resource | Line 1 | Line 2 |
 |---|---|---|
 | CPU | model name, CPU temp right-aligned | P-core and E-core tracks with percentages |
-| GPU | identity, power draw against cap | VRAM used of total, GPU temp right-aligned |
+| GPU | identity, power draw, right-aligned | VRAM used of total, GPU temp right-aligned |
 | RAM | used of total | swap used of total, right-aligned |
 | Disk | fullest filesystem, used of total, with its mount | count of remaining filesystems |
 
 The GPU group is omitted entirely when `gpuBackend` is `"none"`, as today. The
 E-core track is omitted on a non-hybrid chip, where `coreClasses.e` is empty.
-The swap figure is omitted when `swapTotal` is zero.
+The swap figure is omitted when `swapTotal` is zero. Power draw renders alone,
+with no cap beside it: `power.limit` is nvidia-only, so a denominator would
+appear for some cards and not others, and querying it would force a CSV field
+reorder that breaks `parseNvidiaCsv`'s "name is the remainder" design.
 
 Disk shows the **fullest** filesystem rather than every mount. Listing all of
 them is the sub-resource inventory this redesign is removing; naming the one
