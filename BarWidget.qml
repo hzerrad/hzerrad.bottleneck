@@ -4,6 +4,7 @@ import qs.Commons
 import qs.Ui
 import "components"
 import "lib/Format.js" as Format
+import "lib/Theme.js" as Theme
 
 // Footprint grows with what there is to say; at rest, a bare texture strip.
 BarWidget {
@@ -23,9 +24,15 @@ BarWidget {
   // The bar injects theme colours; Color.* is the outside-a-bar fallback.
   readonly property color baseTone: bar ? bar.barForeground : Color.foreground
   readonly property color urgentTone: bar ? bar.urgent : Color.urgent
-  readonly property color tone: widgetState === "anomaly" ? urgentTone
-    : widgetState === "strained" ? baseTone
-    : Qt.rgba(baseTone.r, baseTone.g, baseTone.b, 0.55)
+  readonly property string band: svc && constraint ? svc.bandOf(constraint) : "calm"
+
+  // Calm dims the bar's own foreground rather than using Color.muted: the bar
+  // draws over the user's wallpaper, where muted is not reliably legible.
+  readonly property color tone: Theme.hueFor(band, svc ? svc.themePalette : ({}), {
+    calm: Qt.rgba(baseTone.r, baseTone.g, baseTone.b, 0.55),
+    mid: Color.accent,
+    alarm: urgentTone
+  })
 
   readonly property var pulseValues: (svc && constraint && svc.history[constraint.key])
     ? svc.history[constraint.key] : []
