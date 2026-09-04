@@ -205,3 +205,39 @@ test("summaryLines is silent when everything is already shown", () => {
   assert.equal(s.first, "")
   assert.equal(s.second, "")
 })
+
+// ps reports node's comm as "node-MainThread", which made the rendered hero
+// read "Node-MainThread is pinning your E-c…" — the Text elided on the right,
+// so the half that got cut was the resource. The process name is the only
+// variable-length part of the sentence, so it is what has to give.
+test("headline shortens a long process name, not the resource", () => {
+  const h = V.headline({
+    constraint: { key: "ecore", label: "E-cores", display: "75%", ranks: true },
+    band: "strained", trend: "climbing", duration: "46s",
+    attribution: { name: "node-MainThread", share: 0.9, confident: true, count: 12 }
+  })
+  assert.ok(h.verdict.endsWith("your E-cores"),
+    "the resource must survive: " + h.verdict)
+  assert.ok(h.verdict.indexOf("…") !== -1, "the name should be elided: " + h.verdict)
+  assert.equal(h.verdict, "Node-MainTh… is pinning your E-cores")
+})
+
+test("headline leaves a name that already fits alone", () => {
+  const h = V.headline({
+    constraint: { key: "ecore", label: "E-cores", display: "75%", ranks: true },
+    band: "strained", trend: "climbing", duration: "46s",
+    attribution: { name: "python3", share: 0.9, confident: true, count: 12 }
+  })
+  assert.equal(h.verdict, "Python3 is pinning your E-cores")
+  assert.equal(h.verdict.indexOf("…"), -1)
+})
+
+// Exactly at the cap is not "too long".
+test("headline does not shorten a name of exactly the maximum length", () => {
+  const h = V.headline({
+    constraint: { key: "ram", label: "RAM", display: "88%", ranks: true },
+    band: "strained", trend: "steady", duration: "1m",
+    attribution: { name: "twelvechars!", share: 0.9, confident: true, count: 3 }
+  })
+  assert.equal(h.verdict, "Twelvechars! is holding your RAM")
+})
