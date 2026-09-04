@@ -12,14 +12,14 @@ of the ranking rather than reported as 0%.
 
 ## Bar states
 
-| State | When |
-|---|---|
-| calm | constraint under `calmThreshold`, no anomalies; sparkline only |
-| loaded | constraint at or above `calmThreshold`, under 80% |
-| strained | constraint at or above 80% |
-| anomaly | a resource crossed its alert threshold; urgent colour |
+| State | When | Colour |
+|---|---|---|
+| calm | constraint under `calmThreshold` | dimmed, sparkline only |
+| loaded | constraint at or above `calmThreshold`, under 80% | theme `yellow` |
+| strained | constraint at or above 80% | theme `orange` |
+| anomaly | a resource crossed its alert threshold | theme `red` |
 
-Left-click opens the detail panel. Right-click runs `detailCommand`.
+Left-click opens the panel. Right-click runs `detailCommand`.
 
 ## Settings
 
@@ -29,6 +29,7 @@ Set in `shell.json`, or with `omarchy bar set hzerrad.bottleneck <key> <value>`.
 |---|---|---|
 | `interval` | `2000` | Sampler tick rate, ms |
 | `calmThreshold` | `40` | Pressure % below which the bar goes bare |
+| `overviewDensity` | `"summary"` | Whether the panel opens collapsed or showing every resource |
 | `spikeThreshold` | `70` | Pressure % a resource must cross up through to log a spike |
 | `alertTemp` | `88` | CPU temperature anomaly threshold, °C |
 | `alertGpuTemp` | `83` | GPU temperature anomaly threshold, °C |
@@ -56,6 +57,19 @@ an actual card. If you have one, what the panel shows is worth reporting.
 
 P/E core classification uses `cpuinfo_max_freq`; on a non-hybrid chip every
 core lands in one class.
+
+## Colours
+
+The band colours come from the active theme's `colors.toml` — `yellow` for
+loaded, `orange` for strained — so switching themes recolours both surfaces
+without restarting the shell. Alarm uses the shell's own `urgent`, which
+Omarchy already sources from the theme's `red`, so an alarm here is the same
+red the rest of the shell uses.
+
+A theme that defines neither hue falls back to `accent`, and the ramp degrades
+to three steps rather than four. Nothing is hardcoded.
+
+The panel shows a resource only when it is coloured: one threshold decides both.
 
 ## Install
 

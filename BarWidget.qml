@@ -68,6 +68,7 @@ BarWidget {
     if (!svc) return
     svc.interval = setting("interval", 2000)
     svc.calmThreshold = setting("calmThreshold", 40)
+    svc.overviewDensity = setting("overviewDensity", "summary")
     svc.spikeThreshold = setting("spikeThreshold", 70)
     svc.notifications = setting("notifications", false)
     svc.thresholds = {
