@@ -39,7 +39,7 @@ Panel {
 
   onOpenedChanged: {
     if (!opened) showDetails = false
-    if (!opened && details) details.resetSort()
+    if (!opened && details) { details.resetSort(); details.resetCoreDetail() }
     // Rows accumulate while open and start fresh on each opening, so a panel
     // left open for hours does not reopen showing yesterday's spike.
     if (opened && overview) overview.resetSticky()

@@ -24,6 +24,7 @@ Item {
   property double since: 0
 
   property var coreClasses: ({ p: [], e: [] })
+  property var physicalCores: []          // [{coreId, kind, threads}]
   property var prevStat: null
   property var prevDisk: null
   property double prevDiskAt: 0
@@ -60,9 +61,14 @@ Item {
       default:       return "cpu"
     }
   }
+  // Per-core load is arithmetic over the /proc/stat read sample() already does,
+  // so it costs nothing to compute — but only the expanded grid consumes it, and
+  // an untouched panel should not pay even that.
+  property bool coreDetailOpen: false
   // Held here rather than on the panel because the service is keepLoaded, so
   // the choice survives the panel closing and reopening. Never written to disk.
   property string overviewDensity: "summary"   // summary | all
+  property var coreStats: []              // [{coreId, name, threads, kind, busyPct}]
   property var memInfo: ({})              // raw byte counts for absolute display
   property var procs: []                  // top processes by cpu/mem
   property var gpuProcs: []               // per-process GPU from nvidia-smi pmon
@@ -115,7 +121,22 @@ Item {
           if (f.length === 2) freqs.push({ cpu: parseInt(f[0], 10), khz: parseInt(f[1], 10) })
         }
         root.coreClasses = Proc.classifyCores(freqs)
+        topoProc.running = true
         tick.start()
+      }
+    }
+  }
+
+  // A hyperthread pair shares one core and one sensor, so fold threads back.
+  Process {
+    id: topoProc
+    command: ["sh", "-c",
+      "for c in /sys/devices/system/cpu/cpu[0-9]*/topology/core_id; do " +
+      "n=${c#/sys/devices/system/cpu/cpu}; n=${n%%/*}; echo \"$n $(cat $c)\"; done"]
+    stdout: StdioCollector {
+      onStreamFinished: {
+        var topo = Proc.parseCoreTopology(text)
+        root.physicalCores = Proc.groupPhysicalCores(topo, root.coreClasses)
       }
     }
   }
@@ -403,6 +424,22 @@ Item {
     }
   }
 
+  function refreshCoreStats(prev, curr) {
+    if (!physicalCores.length) return
+    var out = []
+    for (var i = 0; i < physicalCores.length; i++) {
+      var c = physicalCores[i]
+      out.push({
+        coreId: c.coreId,
+        name: c.name,
+        threads: c.threads.length,
+        kind: c.kind,
+        busyPct: prev ? Proc.cpuBusyPct(prev, curr, c.threads) : 0
+      })
+    }
+    coreStats = out
+  }
+
   function pushHistory(key, value) {
     var h = root.history
     if (!h[key]) h[key] = []
@@ -487,6 +524,7 @@ Item {
     prevPressures = Pressure.pressureByKey(resources)
 
     memInfo = mem
+    if (coreDetailOpen) refreshCoreStats(prevStat, stat)
 
     for (var j = 0; j < resources.length; j++) pushHistory(resources[j].key, resources[j].pressure)
 

@@ -20,6 +20,10 @@ Column {
 
   function resetSort() { if (svc) svc.procSortOverride = "" }
 
+  // A closed panel should reopen collapsed, not mid-investigation — the same
+  // reasoning resetSort applies to the process sort override.
+  function resetCoreDetail() { if (svc) svc.coreDetailOpen = false }
+
   function cycleSort() {
     if (!svc) return
     var order = svc.gpuBackend !== "none" ? ["cpu", "mem", "gpu"] : ["cpu", "mem"]
@@ -143,9 +147,12 @@ Column {
         // and .e hold logical CPU indices, so the count includes
         // hyperthreads and combines both classes into one number. It
         // disappears only when that combined total is zero, which is the
-        // window before topology discovery has completed.
+        // window before topology discovery has completed. It doubles as a
+        // control, styled and wired like the "by <sort>" token below: tinted,
+        // underlined on hover, pointing cursor, handlers on the text itself
+        // so the click target stays the glyphs rather than the whole row.
         Text {
-          width: parent.width
+          id: threadsToken
           visible: text !== ""
           text: {
             if (!root.svc || !root.svc.coreClasses) return ""
@@ -153,9 +160,76 @@ Column {
                   + (root.svc.coreClasses.e ? root.svc.coreClasses.e.length : 0)
             return n > 0 ? n + " threads" : ""
           }
-          color: Color.muted
+          color: Color.accent
           font.family: Style.font.family
           font.pixelSize: Style.font.caption
+          font.underline: threadsHover.hovered
+
+          HoverHandler {
+            id: threadsHover
+            cursorShape: Qt.PointingHandCursor
+          }
+
+          TapHandler { onTapped: if (root.svc) root.svc.coreDetailOpen = !root.svc.coreDetailOpen }
+        }
+
+        // Per-core load bars, expanded on demand. Reads physicalCores — real
+        // /sys topology — rather than the `ecore` pressure resource: Pressure.js
+        // emits an `ecore` resource pinned at 0% even on a non-hybrid chip
+        // (has(0) is true for it), so anything driven off that resource would
+        // draw a phantom E-core row here. A non-hybrid machine simply has no
+        // core tagged "E" in physicalCores, so the trap doesn't exist by
+        // construction.
+        Grid {
+          id: coreGrid
+          width: parent.width
+          visible: root.svc && root.svc.coreDetailOpen && root.svc.coreStats.length > 0
+          columns: 2
+          columnSpacing: Style.space(16)
+          rowSpacing: Style.space(4)
+
+          Repeater {
+            model: root.svc ? root.svc.coreStats : []
+
+            Item {
+              width: (coreGrid.width - Style.space(16)) / 2
+              height: Math.max(coreName.implicitHeight, coreTrack.implicitHeight) + Style.space(4)
+
+              Text {
+                id: coreName
+                anchors.left: parent.left
+                anchors.verticalCenter: parent.verticalCenter
+                width: Style.space(26)
+                text: modelData.name
+                color: Color.muted
+                font.family: Style.font.family
+                font.pixelSize: Style.font.caption
+              }
+
+              PressureTrack {
+                id: coreTrack
+                anchors.left: coreName.right
+                anchors.leftMargin: Style.space(6)
+                anchors.right: corePct.left
+                anchors.rightMargin: Style.space(6)
+                anchors.verticalCenter: parent.verticalCenter
+                fraction: modelData.busyPct / 100
+                tone: Color.foreground
+              }
+
+              Text {
+                id: corePct
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                width: Style.space(28)
+                horizontalAlignment: Text.AlignRight
+                text: Math.round(modelData.busyPct) + "%"
+                color: Color.muted
+                font.family: Style.font.family
+                font.pixelSize: Style.font.caption
+              }
+            }
+          }
         }
       }
     }
