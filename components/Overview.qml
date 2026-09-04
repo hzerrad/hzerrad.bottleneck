@@ -170,25 +170,33 @@ Column {
       }
     }
 
+    // During an alarm the hero sentence names the alarm, not the constraint,
+    // so the number beside it — tinted the same alarm red — has to be the
+    // alarm's own value. Otherwise the colour asserts a link between two
+    // different resources that happen to share a sentence.
     Text {
       id: heroValue
       anchors.right: parent.right
       anchors.verticalCenter: heroText.verticalCenter
-      text: root.constraint ? root.constraint.display : "—"
+      text: root.alarm ? root.alarm.display : (root.constraint ? root.constraint.display : "—")
       color: root.heroTone
       font.family: Style.font.family
       font.pixelSize: Style.font.displayLarge
     }
   }
 
-  // The constraint's own history: how we got here, in the one place it matters.
+  // The hero's own history: the alarm's during an alarm (for the same reason
+  // heroValue swaps above), otherwise the constraint's — how we got here, in
+  // the one place it matters.
   Sparkline {
     width: parent.width
     height: Style.space(22)
     cells: 40
     trackAlpha: 0
-    values: (root.svc && root.constraint && root.svc.history[root.constraint.key])
-      ? root.svc.history[root.constraint.key] : []
+    values: {
+      var key = root.alarm ? root.alarm.key : (root.constraint ? root.constraint.key : "")
+      return (root.svc && key && root.svc.history[key]) ? root.svc.history[key] : []
+    }
     stroke: root.heroTone
   }
 

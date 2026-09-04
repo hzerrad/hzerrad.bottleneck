@@ -115,6 +115,9 @@ test("headline agrees in number with the resource", () => {
     "P-cores are busy across 5 processes")
 })
 
+// duration is svc.since's age — how long the constraint has held its
+// position — not how long the alarm has been active, so it must never
+// appear beside the alarm's evidence even when a duration is supplied.
 test("headline leads with the alarm over the constraint", () => {
   const h = V.headline({
     constraint: PCORE, band: "loaded", trend: "steady", duration: "2m10s",
@@ -122,7 +125,7 @@ test("headline leads with the alarm over the constraint", () => {
     attribution: { name: "chrome", share: 0.9, confident: true, count: 4 }
   })
   assert.equal(h.verdict, "Your CPU is running hot")
-  assert.equal(h.evidence, "at 91°C for 2m10s")
+  assert.equal(h.evidence, "at 91°C")
 })
 
 test("headline is reassuring when the constraint is calm", () => {
