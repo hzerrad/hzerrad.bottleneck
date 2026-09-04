@@ -38,13 +38,14 @@ test("parseDf keeps real filesystems and skips virtual ones", () => {
   assert.equal(fsList[0].usedPct, 14)
   assert.equal(fsList[0].sizeKb, 960380628)
   assert.equal(fsList[0].usedKb, 122334124)
+  assert.equal(fsList[0].availKb, 789293932)
   assert.equal(fsList[1].mount, "/boot")
 })
 
-// Some df variants report "-" for blocks/used on a filesystem type that is
-// not in the virtual-filesystem skip list; the capacity decision the Now
-// zone makes still needs a number, not NaN, so these degrade to 0.
-test("parseDf falls back to 0 for size and used when df cannot report them", () => {
+// Some df variants report "-" for blocks/used/available on a filesystem type
+// that is not in the virtual-filesystem skip list; the capacity decision the
+// Now zone makes still needs a number, not NaN, so these degrade to 0.
+test("parseDf falls back to 0 for size, used and available when df cannot report them", () => {
   const text = [
     "Filesystem     Type     1024-blocks      Used Available Capacity Mounted on",
     "weirdfs        custom             -         -         -      45% /weird"
@@ -55,6 +56,21 @@ test("parseDf falls back to 0 for size and used when df cannot report them", () 
   assert.equal(fsList[0].usedPct, 45)
   assert.equal(fsList[0].sizeKb, 0)
   assert.equal(fsList[0].usedKb, 0)
+  assert.equal(fsList[0].availKb, 0)
+})
+
+// A df variant can report Available as "-" on its own while size and used
+// are fine; availKb must degrade independently, the same way sizeKb/usedKb
+// already do when only they are missing.
+test("parseDf falls back to 0 for availKb alone when only it is unreadable", () => {
+  const text = [
+    "Filesystem     Type     1024-blocks      Used Available Capacity Mounted on",
+    "weirdfs        custom       1000000    500000         -      50% /weird"
+  ].join("\n")
+  const fsList = Proc.parseDf(text)
+  assert.equal(fsList[0].sizeKb, 1000000)
+  assert.equal(fsList[0].usedKb, 500000)
+  assert.equal(fsList[0].availKb, 0)
 })
 
 // btrfs subvolumes share a device and report identical usage.
