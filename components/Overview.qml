@@ -3,6 +3,7 @@ import qs.Commons
 import "../lib/Theme.js" as Theme
 import "../lib/Verdict.js" as Verdict
 import "../lib/Format.js" as Format
+import "../lib/Sticky.js" as Sticky
 
 // The compact overview: a verdict, the constraint's history, and as many rows
 // as there is something to say about. Full details stays in Panel.qml.
@@ -47,24 +48,36 @@ Column {
   // Rows may be added while the panel is open, never removed: a value
   // oscillating across the threshold would otherwise make the list flicker.
   property var stickyKeys: ({})
-  function resetSticky() { stickyKeys = ({}) }
+
+  // The summary's inclusion rule: every contended resource worth colouring,
+  // plus any condition currently anomalous. Shared by the seed and the grow
+  // path so they can never disagree about what belongs.
+  function eligibleKeys() {
+    var out = []
+    var i
+    for (i = 0; i < root.contended.length; i++) {
+      var r = root.contended[i]
+      if (Theme.inSummary(root.bandOf(r))) out.push(r.key)
+    }
+    for (i = 0; i < root.conditions.length; i++) {
+      var c = root.conditions[i]
+      if (root.svc && root.svc.isAnomalous(c.key)) out.push(c.key)
+    }
+    return out
+  }
+
+  // Connections only fires on the *next* signal, so without a synchronous
+  // seed here the panel's first frame on an already-loaded machine would
+  // show an empty — and false — summary until the next sample lands.
+  function resetSticky() {
+    stickyKeys = Sticky.mergeSticky({}, root.eligibleKeys()).keys
+  }
 
   Connections {
     target: root.svc
     function onResourcesChanged() {
-      var next = {}
-      var grew = false
-      var k
-      for (k in root.stickyKeys) next[k] = true
-      for (var i = 0; i < root.contended.length; i++) {
-        var r = root.contended[i]
-        if (Theme.inSummary(root.bandOf(r)) && !next[r.key]) { next[r.key] = true; grew = true }
-      }
-      for (var j = 0; j < root.conditions.length; j++) {
-        var c = root.conditions[j]
-        if (root.svc.isAnomalous(c.key) && !next[c.key]) { next[c.key] = true; grew = true }
-      }
-      if (grew) root.stickyKeys = next
+      var merged = Sticky.mergeSticky(root.stickyKeys, root.eligibleKeys())
+      if (merged.grew) root.stickyKeys = merged.keys
     }
   }
 
@@ -81,7 +94,19 @@ Column {
   }
 
   readonly property bool expanded: svc && svc.overviewDensity === "all"
-  readonly property var visibleRows: expanded ? contended : summaryRows
+
+  // Expanding must never show less: an anomalous condition already on
+  // screen in summary (it is always eligible, see eligibleKeys) would
+  // otherwise vanish here, since contended alone excludes conditions.
+  readonly property var expandedRows: {
+    var out = contended.slice()
+    for (var i = 0; i < conditions.length; i++) {
+      if (svc && svc.isAnomalous(conditions[i].key)) out.push(conditions[i])
+    }
+    return out
+  }
+
+  readonly property var visibleRows: expanded ? expandedRows : summaryRows
 
   readonly property var hiddenRows: {
     var shown = {}
