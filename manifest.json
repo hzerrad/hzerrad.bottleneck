@@ -33,7 +33,7 @@
     },
     "schema": [
       { "key": "interval", "type": "integer", "label": "Sample interval (ms)", "min": 500, "max": 10000, "step": 250, "defaultValue": 2000, "description": "How often /proc, /sys and GPU telemetry are read." },
-      { "key": "calmThreshold", "type": "integer", "label": "Calm below (%)", "min": 0, "max": 100, "step": 5, "defaultValue": 40, "description": "Pressure below which the bar shows only a sparkline, with no glyph or digits." },
+      { "key": "calmThreshold", "type": "integer", "label": "Calm below (%)", "min": 0, "max": 100, "step": 5, "defaultValue": 40, "description": "Pressure below which the bar shows only a sparkline, and below which the panel leaves the resource off its list." },
       { "key": "overviewDensity", "type": "enum", "label": "Overview starts", "options": ["summary", "all"], "defaultValue": "summary", "description": "Whether the panel opens showing only what is under pressure, or every resource. Either way you can switch it while the panel is open." },
       { "key": "spikeThreshold", "type": "integer", "label": "Log a spike at (%)", "min": 0, "max": 100, "step": 5, "defaultValue": 70, "description": "Pressure a resource must cross upward before the panel records a spike and captures the processes responsible." },
       { "key": "alertTemp", "type": "integer", "label": "CPU temperature alert (°C)", "min": 50, "max": 110, "step": 1, "defaultValue": 88 },

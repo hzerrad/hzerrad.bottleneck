@@ -28,7 +28,7 @@ Set in `shell.json`, or with `omarchy bar set hzerrad.bottleneck <key> <value>`.
 | Setting | Default | Meaning |
 |---|---|---|
 | `interval` | `2000` | Sampler tick rate, ms |
-| `calmThreshold` | `40` | Pressure % below which the bar goes bare |
+| `calmThreshold` | `40` | Pressure % below which the bar goes bare and the panel leaves the resource off its list |
 | `overviewDensity` | `summary` | Whether the panel opens collapsed or showing every resource |
 | `spikeThreshold` | `70` | Pressure % a resource must cross up through to log a spike |
 | `alertTemp` | `88` | CPU temperature anomaly threshold, °C |
