@@ -481,9 +481,18 @@ Item {
       diskIoSaturated: Pressure.debounced(diskIoStreak, 3)
     }
 
-    resources = Pressure.buildResources(sampleObj)
-    anomalies = Pressure.detectAnomalies(resources, thresholds, flags)
-    constraint = Pressure.rankConstraint(resources)
+    // Computed into locals first, then assigned anomalies-before-resources:
+    // Overview.qml's onResourcesChanged handler reads anomalies via
+    // isAnomalous(), so if resources changed first that handler would see
+    // last sample's anomalies and an alarm would take an extra sample to
+    // reach the summary.
+    var nextResources = Pressure.buildResources(sampleObj)
+    var nextAnomalies = Pressure.detectAnomalies(nextResources, thresholds, flags)
+    var nextConstraint = Pressure.rankConstraint(nextResources)
+
+    anomalies = nextAnomalies
+    resources = nextResources
+    constraint = nextConstraint
     barStateName = Pressure.barState(constraint, anomalies, calmThreshold)
 
     if (constraint && constraint.key !== lastConstraintKey) {
