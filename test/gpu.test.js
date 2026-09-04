@@ -94,3 +94,31 @@ test("sample commands read the documented sysfs attributes", () => {
   assert.ok(Gpu.amdSampleCommand().indexOf("mem_info_vram_total") !== -1)
   assert.ok(Gpu.intelSampleCommand().indexOf("act_freq_mhz") !== -1)
 })
+
+test("nvidiaQueryArgs asks for the card's name", () => {
+  const args = Gpu.nvidiaQueryArgs(2000)
+  assert.ok(args.some(a => a.indexOf("name") !== -1))
+})
+
+test("parseNvidiaCsv reads the name without disturbing the numbers", () => {
+  const g = Gpu.parseNvidiaCsv(fixture("nvidia-smi.csv"))
+  assert.equal(g.name, "NVIDIA GeForce RTX 3060")
+  assert.equal(g.utilPct, 44)
+  assert.equal(g.vramUsedMiB, 2155)
+  assert.equal(g.vramTotalMiB, 12282)
+  assert.equal(g.tempC, 41)
+  assert.equal(g.watts, 25.02)
+})
+
+// A driver that does not report the field must still parse.
+test("parseNvidiaCsv survives a line with no name", () => {
+  const g = Gpu.parseNvidiaCsv("44, 2155, 12282, 41, 25.02")
+  assert.equal(g.name, null)
+  assert.equal(g.utilPct, 44)
+})
+
+// Card names have contained commas; the field is last, so take the remainder.
+test("parseNvidiaCsv keeps a name containing a comma", () => {
+  const g = Gpu.parseNvidiaCsv("44, 2155, 12282, 41, 25.02, Some Card, Special Edition")
+  assert.equal(g.name, "Some Card, Special Edition")
+})
