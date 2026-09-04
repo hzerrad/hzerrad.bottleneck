@@ -71,7 +71,6 @@ BarWidget {
     if (!svc) return
     svc.interval = setting("interval", 2000)
     svc.calmThreshold = setting("calmThreshold", 40)
-    svc.overviewDensity = setting("overviewDensity", "summary")
     svc.spikeThreshold = setting("spikeThreshold", 70)
     svc.notifications = setting("notifications", false)
     svc.thresholds = {
@@ -82,10 +81,20 @@ BarWidget {
     }
   }
 
+  // overviewDensity lives on the service for the life of the shell (it's
+  // keepLoaded) and the setting only supplies its starting value — unlike
+  // every other key above, it is not meant to be re-pushed on every settings
+  // change. Re-pushing it from pushConfig() would revert a live click on the
+  // panel's density control the next time settings reload while it's open.
+  function seedOverviewDensity() {
+    if (!svc) return
+    svc.overviewDensity = setting("overviewDensity", "summary")
+  }
+
   onBarChanged: { injectPanel(); pushConfig() }
   onSettingsChanged: { injectPanel(); pushConfig() }
-  onSvcChanged: pushConfig()
-  Component.onCompleted: pushConfig()
+  onSvcChanged: { pushConfig(); seedOverviewDensity() }
+  Component.onCompleted: { pushConfig(); seedOverviewDensity() }
 
   implicitWidth: root.vertical ? barSize : content.implicitWidth + Style.space(4)
   implicitHeight: root.vertical ? content.implicitHeight + Style.space(4) : barSize
