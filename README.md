@@ -25,17 +25,16 @@ Left-click opens the panel. Right-click runs `detailCommand`.
 
 Left-click the widget, then **Full details**, for three zones:
 
-- **Now** — what each resource actually is and where it stands, in real units:
-  the CPU and GPU by name, memory and disk as used-of-total rather than a
-  percentage. A percentage is a ratio; deciding whether another VM fits needs
-  the numerator.
-- **Using it now** — the processes responsible, ranked by whatever is currently
-  constraining the machine. Click `by cpu` in the heading to rank by memory or
-  GPU time instead; it returns to following the constraint when the panel
-  closes.
-- **Recently** — what has crossed `spikeThreshold` lately, and which processes
-  were running at that moment. This is recorded whether or not the panel is
-  open, so it catches what you missed.
+- A labelled readout of what each resource actually is and where it stands, in
+  real units: the CPU and GPU by name, memory and disk as used-of-total rather
+  than a percentage. A percentage is a ratio; deciding whether another VM fits
+  needs the numerator.
+- **Top processes ordered by** whatever is currently constraining the machine.
+  Click the `by cpu` part of that heading to order by memory or GPU time
+  instead; it returns to following the constraint when the panel closes.
+- **Recent spikes** — what has crossed `spikeThreshold` lately, and which
+  processes were running at that moment. This is recorded whether or not the
+  panel is open, so it catches what you missed.
 
 The GPU is named only where the driver reports it, which today means NVIDIA.
 AMD and Intel show the driver and VRAM size instead — deriving a marketing name
@@ -69,7 +68,7 @@ measurement; VRAM is absent unless the card exposes it. With no backend, GPU
 and VRAM stay out of the ranking.
 
 Per-process GPU attribution in the panel comes from `nvidia-smi pmon`, which
-has no sysfs equivalent, so GPU time in Using it now is NVIDIA-only.
+has no sysfs equivalent, so GPU time in the process list is NVIDIA-only.
 
 Only the NVIDIA path has run on real hardware. AMD and Intel are implemented
 and unit-tested against captured sysfs output, but no one has yet run either on
@@ -117,7 +116,7 @@ installed. The rest:
 |---|---|---|
 | `sh`, `cat` | reading sysfs in a single spawn per tick | always |
 | `df` | filesystem usage | always |
-| `ps` | top processes in Using it now | only while the panel is open |
+| `ps` | the top-processes list | only while the panel is open |
 | `ps` | spike attribution | whenever a spike is recorded, panel open or not |
 | `nvidia-smi` | NVIDIA telemetry and per-process GPU | NVIDIA cards only |
 | `omarchy-notification-send` | anomaly notifications | only when `notifications` is on |
