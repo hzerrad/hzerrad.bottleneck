@@ -25,10 +25,10 @@ Left-click opens the panel. Right-click runs `detailCommand`.
 
 Left-click the widget, then **Full details**, for three zones:
 
-- **Now** — what each resource actually is and where it stands: the CPU and
-  GPU by name, memory as used-of-total rather than a percentage — a
-  percentage is a ratio, and deciding whether another VM fits needs the
-  numerator — and disk as the percentage full of the fullest filesystem.
+- **Now** — what each resource actually is and where it stands, in real units:
+  the CPU and GPU by name, memory and disk as used-of-total rather than a
+  percentage. A percentage is a ratio; deciding whether another VM fits needs
+  the numerator.
 - **Using it now** — the processes responsible, ranked by whatever is currently
   constraining the machine. Click `by cpu` in the heading to rank by memory or
   GPU time instead; it returns to following the constraint when the panel

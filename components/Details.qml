@@ -225,11 +225,18 @@ Column {
       height: diskText.implicitHeight
       visible: root.fullestFs !== null
 
+      // sizeKb/usedKb are 1024-blocks from df, hence bytes; usedPct-only is
+      // the fallback for a df variant that reported "-" for both (parseDf
+      // stores 0 rather than NaN in that case), so 0 KB never renders as a
+      // real "0 B of 0 B".
       Text {
         id: diskText
         anchors.left: parent.left
         text: root.fullestFs
-          ? root.fullestFs.usedPct + "% full on " + root.fullestFs.mount
+          ? (root.fullestFs.sizeKb > 0
+              ? Format.bytes(root.fullestFs.usedKb * 1024) + " of "
+                + Format.bytes(root.fullestFs.sizeKb * 1024) + " on " + root.fullestFs.mount
+              : root.fullestFs.usedPct + "% full on " + root.fullestFs.mount)
           : ""
         color: Color.foreground
         font.family: Style.font.family

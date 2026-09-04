@@ -36,7 +36,25 @@ test("parseDf keeps real filesystems and skips virtual ones", () => {
   assert.equal(fsList.length, 2)
   assert.equal(fsList[0].mount, "/")
   assert.equal(fsList[0].usedPct, 14)
+  assert.equal(fsList[0].sizeKb, 960380628)
+  assert.equal(fsList[0].usedKb, 122334124)
   assert.equal(fsList[1].mount, "/boot")
+})
+
+// Some df variants report "-" for blocks/used on a filesystem type that is
+// not in the virtual-filesystem skip list; the capacity decision the Now
+// zone makes still needs a number, not NaN, so these degrade to 0.
+test("parseDf falls back to 0 for size and used when df cannot report them", () => {
+  const text = [
+    "Filesystem     Type     1024-blocks      Used Available Capacity Mounted on",
+    "weirdfs        custom             -         -         -      45% /weird"
+  ].join("\n")
+  const fsList = Proc.parseDf(text)
+  assert.equal(fsList.length, 1)
+  assert.equal(fsList[0].mount, "/weird")
+  assert.equal(fsList[0].usedPct, 45)
+  assert.equal(fsList[0].sizeKb, 0)
+  assert.equal(fsList[0].usedKb, 0)
 })
 
 // btrfs subvolumes share a device and report identical usage.
