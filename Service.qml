@@ -5,6 +5,7 @@ import "lib/Proc.js" as Proc
 import "lib/Gpu.js" as Gpu
 import "lib/Pressure.js" as Pressure
 import "lib/Theme.js" as Theme
+import "lib/Hardware.js" as Hardware
 
 // One sampler for the plugin. keepLoaded mounts it at shell startup and
 // survives the widget being hidden, so history stays continuous.
@@ -31,6 +32,7 @@ Item {
   property string lastConstraintKey: ""
   property var gpuSample: null
   property string gpuBackend: "none"
+  property string cpuModel: ""
   property bool notifications: false
   property var notifiedKeys: ({})
   property var themePalette: ({})
@@ -41,7 +43,23 @@ Item {
 
   // Detail state (expanded panel)
   property bool panelOpen: false          // panel sets this; gates costly work
-  property string procSort: "cpu"         // cpu | mem | gpu
+  // "" means follow the constraint. The panel's heading control sets it, and
+  // clears it when the panel closes, so following the constraint is the state
+  // you return to — the override is for the investigation you are in the
+  // middle of, not a preference.
+  property string procSortOverride: ""
+
+  readonly property string effectiveProcSort: {
+    if (procSortOverride !== "") return procSortOverride
+    switch (constraintMetric) {
+      case "mem":    return "mem"
+      case "gpusm":
+      case "gpumem": return "gpu"
+      // Swap and disk I/O have no per-process source, so CPU is the useful
+      // default rather than an empty list.
+      default:       return "cpu"
+    }
+  }
   // Held here rather than on the panel because the service is keepLoaded, so
   // the choice survives the panel closing and reopening. Never written to disk.
   property string overviewDensity: "summary"   // summary | all
@@ -153,6 +171,22 @@ Item {
         if (dir && pick) tempFile.path = dir + "/" + pick
         root.coreTempDir = dir
         root.coreTempMap = Proc.parseCoretempMap(labels)
+      }
+    }
+  }
+
+  // Identity is fixed for the boot, so this runs once rather than on the tick.
+  // 4 KB covers the first processor block on any machine; /proc/cpuinfo repeats
+  // every field per logical CPU and there are twenty of them on a mid-range
+  // desktop.
+  Process {
+    id: cpuModelProc
+    running: true
+    command: ["sh", "-c", "head -c 4096 /proc/cpuinfo"]
+    stdout: StdioCollector {
+      onStreamFinished: {
+        var m = Hardware.parseCpuModel(text)
+        root.cpuModel = m ? m : ""
       }
     }
   }
@@ -315,12 +349,12 @@ Item {
     id: procProc
     command: ["sh", "-c",
       "ps -eo pid,comm,pcpu,pmem --sort=-" +
-      (root.procSort === "mem" ? "pmem" : "pcpu") +
+      (root.effectiveProcSort === "mem" ? "pmem" : "pcpu") +
       " --no-headers | head -40"]
     stdout: StdioCollector {
       onStreamFinished: {
         root.procs = Proc.aggregateByName(Proc.parsePsList(text),
-          root.procSort === "mem" ? "memPct" : "cpuPct")
+          root.effectiveProcSort === "mem" ? "memPct" : "cpuPct")
       }
     }
   }
