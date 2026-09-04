@@ -42,6 +42,9 @@ Item {
   // Detail state (expanded panel)
   property bool panelOpen: false          // panel sets this; gates costly work
   property string procSort: "cpu"         // cpu | mem | gpu
+  // Held here rather than on the panel because the service is keepLoaded, so
+  // the choice survives the panel closing and reopening. Never written to disk.
+  property string overviewDensity: "summary"   // summary | all
   property var physicalCores: []          // [{coreId, kind, threads}]
   property var coreStats: []              // [{coreId, kind, busyPct, tempC}]
   property var coreTempMap: ({})          // coreId -> hwmon input filename
@@ -301,6 +304,8 @@ Item {
     triggeredOnStart: true
     onTriggered: {
       procProc.running = true
+      if (root.constraintMetric === "cpu" || root.constraintMetric === "mem")
+        constraintProcProc.running = true
       if (root.coreTempDir !== "") coreTempProc.running = true
       if (root.gpuBackend === "nvidia") gpuProcProc.running = true
     }
@@ -317,6 +322,50 @@ Item {
         root.procs = Proc.aggregateByName(Proc.parsePsList(text),
           root.procSort === "mem" ? "memPct" : "cpuPct")
       }
+    }
+  }
+
+  // The verdict needs the process list for the constraint's own dimension,
+  // which is not necessarily the tab the Full details list is showing.
+  readonly property string constraintMetric: {
+    if (!constraint) return ""
+    switch (constraint.key) {
+      case "pcore": case "ecore": return "cpu"
+      case "ram":                 return "mem"
+      case "gpu":                 return "gpusm"
+      case "vram":                return "gpumem"
+      // Swap and disk I/O have no per-process source here.
+      default:                    return ""
+    }
+  }
+
+  property var constraintProcs: []
+
+  Process {
+    id: constraintProcProc
+    command: ["sh", "-c",
+      "ps -eo pid,comm,pcpu,pmem --sort=-" +
+      (root.constraintMetric === "mem" ? "pmem" : "pcpu") +
+      " --no-headers | head -40"]
+    stdout: StdioCollector {
+      onStreamFinished: {
+        root.constraintProcs = Proc.aggregateByName(Proc.parsePsList(text),
+          root.constraintMetric === "mem" ? "memPct" : "cpuPct")
+      }
+    }
+  }
+
+  readonly property var attributionList:
+    (constraintMetric === "gpusm" || constraintMetric === "gpumem")
+      ? gpuProcs : constraintProcs
+
+  readonly property string attributionKey: {
+    switch (constraintMetric) {
+      case "cpu":    return "cpuPct"
+      case "mem":    return "memPct"
+      case "gpusm":  return "smPct"
+      case "gpumem": return "memPct"
+      default:       return ""
     }
   }
 
