@@ -287,7 +287,11 @@ Column {
   Item {
     width: parent.width
     height: densityLabel.implicitHeight + Style.space(6)
-    visible: root.contended.length > root.summaryRows.length || root.expanded
+    // summaryRows counts sticky conditions too, so comparing its length
+    // against contended.length undercounts what is actually hidden whenever
+    // a condition (not a contended resource) is what's off-screen.
+    // hiddenRows already applies the right predicate.
+    visible: root.hiddenRows.length > 0 || root.expanded
 
     Text {
       id: densityLabel
