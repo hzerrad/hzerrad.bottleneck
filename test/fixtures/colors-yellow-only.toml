@@ -1,0 +1,5 @@
+mode = "dark"
+accent     = "#cacccc"  # accent
+yellow     = "#d8a548"  # gold
+background = "#101315"  # background
+foreground = "#cacccc"  # foreground

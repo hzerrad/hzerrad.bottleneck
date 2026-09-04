@@ -63,3 +63,19 @@ test("inSummary follows the colour rule exactly", () => {
   assert.equal(Theme.inSummary("strained"), true)
   assert.equal(Theme.inSummary("alarm"), true)
 })
+
+// Real theme files have trailing comments on almost every colour line.
+test("parsePalette reads colours with trailing comments", () => {
+  const raw = `yellow  = "#d8a548"     # gold\norange  = "#cb7f43"     # Muse rooftops`
+  const p = Theme.parsePalette(raw)
+  assert.equal(p.yellow, "#d8a548")
+  assert.equal(p.orange, "#cb7f43")
+})
+
+// A theme with `yellow` but no `orange` keeps its own yellow and falls back only for strained.
+test("hueFor falls back per band, not all-or-nothing", () => {
+  const yellowOnly = Theme.parsePalette(fixture("colors-yellow-only.toml"))
+  const fb = { calm: "#707880", mid: "#cacccc", alarm: "#a55555" }
+  assert.equal(Theme.hueFor("loaded", yellowOnly, fb), "#d8a548")
+  assert.equal(Theme.hueFor("strained", yellowOnly, fb), "#cacccc")
+})

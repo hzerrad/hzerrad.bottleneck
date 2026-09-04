@@ -1,15 +1,15 @@
 # Dunan — a Suikoden II theme for Omarchy
 mode = "dark"
 
-accent    = "#d8a548"
-muted     = "#55648a"
+accent    = "#d8a548"   # accent colour
+muted     = "#55648a"   # muted tone
 
-background = "#141c33"
-foreground = "#e6dabc"
+background = "#141c33"  # dark background
+foreground = "#e6dabc"  # light foreground
 
-red     = "#c85a52"
-yellow  = "#d8a548"
-orange  = "#cb7f43"
-green   = "#7f9c5f"
+red     = "#c85a52"     # Highland crimson
+yellow  = "#d8a548"     # gold
+orange  = "#cb7f43"     # Muse rooftops, the Beautiful Golden City
+green   = "#7f9c5f"     # forest green
 
 hyprland_active_border = "rgba(d8a548ee) rgba(9ed6e2ee) 45deg"
