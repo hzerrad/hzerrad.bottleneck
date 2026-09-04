@@ -55,20 +55,28 @@ skipped rather than guessed at.
 ~/.local/state/omarchy/current/theme/colors.toml
 ```
 
-| Band | Preferred key | Fallback |
+| Band | Read from `colors.toml` | Fallback |
 |---|---|---|
 | calm | — | `Color.muted` |
 | loaded | `yellow` | `Color.accent` |
 | strained | `orange` | `Color.accent` |
-| alarm | `red` | `Color.urgent` |
+| alarm | — | `Color.urgent` |
 
-Fallback is per key, not all-or-nothing: a theme defining `red` but not
-`orange` gets its own red and falls back only for strained. With no readable
-file at all the ramp degrades to a three-step `muted` / `accent` / `urgent`,
-which is legible on every theme including the stock one.
+Only two keys are parsed. `Color.loadColors` already assigns the theme's `red`
+to `Color.urgent`, so the alarm band takes it from the singleton rather than
+re-reading it — which also guarantees an alarm here is the same red the rest of
+the shell uses. `yellow` and `orange` are the only hues the singleton drops.
 
-`Service.qml` reads the file through a `FileView` with change watching, so
-switching themes recolours both surfaces without restarting the shell.
+Fallback is per key, not all-or-nothing: a theme defining `yellow` but not
+`orange` keeps its own yellow and falls back only for strained. With no
+readable file the ramp degrades to a three-step `muted` / `accent` / `urgent`,
+legible on every theme including the stock one.
+
+`Service.qml` reads the file through its own `FileView` with `watchChanges`.
+The shell's own `colorsFile` sets `watchChanges: false` and depends on a theme
+switch pushing the payload over shell IPC, which plugins do not receive — so
+watching the file directly is what makes a theme switch recolour both surfaces
+without restarting the shell.
 
 ## Panel layout
 
