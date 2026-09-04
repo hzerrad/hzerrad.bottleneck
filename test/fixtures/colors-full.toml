@@ -1,0 +1,15 @@
+# Dunan — a Suikoden II theme for Omarchy
+mode = "dark"
+
+accent    = "#d8a548"
+muted     = "#55648a"
+
+background = "#141c33"
+foreground = "#e6dabc"
+
+red     = "#c85a52"
+yellow  = "#d8a548"
+orange  = "#cb7f43"
+green   = "#7f9c5f"
+
+hyprland_active_border = "rgba(d8a548ee) rgba(9ed6e2ee) 45deg"
