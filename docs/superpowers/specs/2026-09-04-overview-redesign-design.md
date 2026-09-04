@@ -253,7 +253,7 @@ The two collapsed sentences beneath the rule:
 | only one resource left below | `<name> is the only other one, at <n>%.` | — |
 
 Sentence case, active voice, no middle-dot meta strings, no trailing arrows.
-The verb varies by resource (`pinning`, `holding`, `driving`, `saturating`) and
+The verb varies by resource (`pinning`, `holding`, `driving`, `filling`) and
 lives in a table in `lib/Verdict.js`, not scattered through QML.
 
 ## Bar cell
