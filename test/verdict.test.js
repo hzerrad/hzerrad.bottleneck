@@ -4,6 +4,7 @@ const assert = require("node:assert/strict")
 const { loadQmlJs } = require("./load.js")
 
 const V = loadQmlJs("lib/Verdict.js")
+const P = loadQmlJs("lib/Pressure.js")
 
 const flat = n => new Array(n).fill(0.4)
 const rising = () => { const a = []; for (let i = 0; i < 30; i++) a.push(0.2 + i * 0.01); return a }
@@ -126,6 +127,42 @@ test("headline leads with the alarm over the constraint", () => {
   })
   assert.equal(h.verdict, "Your CPU is running hot")
   assert.equal(h.evidence, "at 91°C")
+})
+
+// ALARM in lib/Verdict.js is a hand-written table keyed by resource key, with
+// a fallback at headline()'s alarm branch that should be unreachable. Nothing
+// ties the table to lib/Pressure.js's classifyHealth, which is the actual
+// source of truth for which keys can go critical — so a newly-added
+// critical-capable resource with no ALARM entry would silently fall through
+// to the generic fallback instead of failing a build. ALARM is module-private,
+// so this asserts coverage through headline()'s output rather than the table.
+test("every resource classifyHealth can mark critical has an ALARM sentence", () => {
+  const fullSample = {
+    pPct: 50, ePct: 50, memPct: 50, swapPct: 5,
+    gpu: { utilPct: 50, vramUsedMiB: 500, vramTotalMiB: 1000, tempC: 50, watts: 50 },
+    diskIo: [{ name: "nvme0n1", utilPct: 50 }],
+    filesystems: [{ mount: "/", usedPct: 50 }],
+    cpuTempC: 50, gpuTempC: 50
+  }
+  const allKeys = P.buildResources(fullSample).map(res => res.key)
+
+  const worstThresholds = { alertTemp: 88, alertGpuTemp: 83, alertDisk: 90, alertVram: 95 }
+  const worstFlags = { swapGrowing: true, ramCritical: true, diskIoSaturated: true }
+  const asResource = key => ({ key, pressure: 1, label: key, glyph: "", display: "" })
+
+  const criticalKeys = allKeys.filter(key =>
+    P.classifyHealth(asResource(key), worstThresholds, worstFlags) === "critical")
+
+  // A canary against this fixture quietly stopping exercising any critical
+  // path (e.g. if buildResources or classifyHealth's switch changed shape).
+  assert.ok(criticalKeys.includes("cputemp") && criticalKeys.includes("swap"),
+    "fixture no longer exercises the critical branches this test depends on")
+
+  for (const key of criticalKeys) {
+    const h = V.headline({ alarm: { key: key, label: "Some Resource", display: "99%" } })
+    assert.notEqual(h.verdict, "Some Resource needs attention",
+      key + " has no ALARM entry in lib/Verdict.js — headline() fell through to the generic fallback")
+  }
 })
 
 test("headline is reassuring when the constraint is calm", () => {
