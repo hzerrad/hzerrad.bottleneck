@@ -32,6 +32,11 @@ Column {
       gpu ? gpu.name : null,
       (gpu && gpu.vramTotalMiB > 0) ? Format.mib(gpu.vramTotalMiB) : "")
 
+  // A fixed-width label column for the Now zone, the same technique
+  // Overview.qml uses for its own row labels — narrower here because "CPU",
+  // "GPU", "RAM" and "Disk" are much shorter than "P-cores" or "CPU temp".
+  readonly property int nowLabelWidth: Style.space(36)
+
   // The fullest filesystem, not every mount: naming the one closest to full is
   // the same editorial judgement the ranking makes upstairs.
   readonly property var fullestFs: {
@@ -52,7 +57,7 @@ Column {
       return (svc.gpuProcs || []).slice(0, 6).map(function (g) {
         return { name: g.name,
                  lead: Math.round(g.smPct) + "% gpu",
-                 sub: Math.round(g.memPct) + "% mem" }
+                 sub: Math.round(g.memPct) + "% vram" }
       })
     }
     return (svc.procs || []).slice(0, 6).map(function (p) {
@@ -92,111 +97,174 @@ Column {
     // CPU
     Item {
       width: parent.width
-      height: cpuName.implicitHeight
+      height: cpuContent.height
 
       Text {
-        id: cpuName
         anchors.left: parent.left
-        text: root.svc && root.svc.cpuModel !== "" ? root.svc.cpuModel : "CPU"
-        color: Color.foreground
-        font.family: Style.font.family
-        font.pixelSize: Style.font.bodySmall
-      }
-
-      Text {
-        anchors.right: parent.right
-        visible: text !== ""
-        text: root.cpuTempDisplay
+        anchors.top: parent.top
+        width: root.nowLabelWidth
+        text: "CPU"
         color: Color.muted
         font.family: Style.font.family
         font.pixelSize: Style.font.bodySmall
       }
-    }
 
-    // A thread count, not the P/E utilisation the overview already shows two
-    // inches above — this line is identity, not load. coreClasses.p/.e hold
-    // logical CPU indices, so the count includes hyperthreads. A non-hybrid
-    // CPU has no e list worth naming, so the row disappears rather than
-    // reporting a hollow "E-cores 0%".
-    Text {
-      width: parent.width
-      visible: text !== ""
-      text: {
-        if (!root.svc || !root.svc.coreClasses) return ""
-        var n = (root.svc.coreClasses.p ? root.svc.coreClasses.p.length : 0)
-              + (root.svc.coreClasses.e ? root.svc.coreClasses.e.length : 0)
-        return n > 0 ? n + " threads" : ""
+      Column {
+        id: cpuContent
+        anchors.left: parent.left
+        anchors.leftMargin: root.nowLabelWidth
+        anchors.right: parent.right
+        anchors.top: parent.top
+        spacing: Style.space(4)
+
+        Item {
+          width: parent.width
+          height: cpuName.implicitHeight
+
+          Text {
+            id: cpuName
+            anchors.left: parent.left
+            text: root.svc && root.svc.cpuModel !== "" ? root.svc.cpuModel : "CPU"
+            color: Color.foreground
+            font.family: Style.font.family
+            font.pixelSize: Style.font.bodySmall
+          }
+
+          Text {
+            anchors.right: parent.right
+            visible: text !== ""
+            text: root.cpuTempDisplay
+            color: Color.muted
+            font.family: Style.font.family
+            font.pixelSize: Style.font.bodySmall
+          }
+        }
+
+        // A thread count, not the P/E utilisation the overview already shows
+        // two inches above — this line is identity, not load. coreClasses.p
+        // and .e hold logical CPU indices, so the count includes
+        // hyperthreads and combines both classes into one number. It
+        // disappears only when that combined total is zero, which is the
+        // window before topology discovery has completed.
+        Text {
+          width: parent.width
+          visible: text !== ""
+          text: {
+            if (!root.svc || !root.svc.coreClasses) return ""
+            var n = (root.svc.coreClasses.p ? root.svc.coreClasses.p.length : 0)
+                  + (root.svc.coreClasses.e ? root.svc.coreClasses.e.length : 0)
+            return n > 0 ? n + " threads" : ""
+          }
+          color: Color.muted
+          font.family: Style.font.family
+          font.pixelSize: Style.font.caption
+        }
       }
-      color: Color.muted
-      font.family: Style.font.family
-      font.pixelSize: Style.font.caption
     }
 
-    // GPU
+    // GPU — omitted entirely when there is no GPU. gpuName is a `string`
+    // property, so a `null` identity (gpuBackend "none") arrives here as ""
+    // rather than null; testing for null would always be true and leave a
+    // blank gap where the group should have vanished.
     Item {
       width: parent.width
-      height: gpuName.implicitHeight
-      visible: root.gpuName !== null
+      height: gpuContent.height
+      visible: root.gpuName !== ""
 
       Text {
-        id: gpuName
         anchors.left: parent.left
-        text: root.gpuName ? root.gpuName : ""
-        color: Color.foreground
+        anchors.top: parent.top
+        width: root.nowLabelWidth
+        text: "GPU"
+        color: Color.muted
         font.family: Style.font.family
         font.pixelSize: Style.font.bodySmall
       }
 
-      Text {
-        anchors.right: parent.right
-        visible: root.gpu !== null && root.gpu.watts !== null
-        text: root.gpu ? Format.watts(root.gpu.watts) : ""
-        color: Color.muted
-        font.family: Style.font.family
-        font.pixelSize: Style.font.bodySmall
-      }
-    }
-
-    // VRAM and temperature are read from independently-guarded sysfs files
-    // (lib/Gpu.js), so a card can report one without the other. The row
-    // stays up if either is known; each half is gated on its own value so
-    // neither can borrow the other's visibility.
-    Item {
-      width: parent.width
-      height: vramText.implicitHeight
-      visible: root.gpu !== null && (root.gpu.vramTotalMiB > 0 || root.gpu.tempC !== null)
-
-      Text {
-        id: vramText
+      Column {
+        id: gpuContent
         anchors.left: parent.left
-        visible: root.gpu !== null && root.gpu.vramTotalMiB > 0
-        text: (root.gpu && root.gpu.vramTotalMiB > 0)
-          ? "VRAM " + Format.mib(root.gpu.vramUsedMiB) + " of " + Format.mib(root.gpu.vramTotalMiB)
-          : ""
-        color: Color.muted
-        font.family: Style.font.family
-        font.pixelSize: Style.font.caption
-      }
-
-      Text {
+        anchors.leftMargin: root.nowLabelWidth
         anchors.right: parent.right
-        visible: root.gpu !== null && root.gpu.tempC !== null
-        text: root.gpu && root.gpu.tempC !== null ? Format.celsius(root.gpu.tempC) : ""
-        color: Color.muted
-        font.family: Style.font.family
-        font.pixelSize: Style.font.caption
+        anchors.top: parent.top
+        spacing: Style.space(4)
+
+        Item {
+          width: parent.width
+          height: gpuLine.implicitHeight
+
+          Text {
+            id: gpuLine
+            anchors.left: parent.left
+            text: root.gpuName
+            color: Color.foreground
+            font.family: Style.font.family
+            font.pixelSize: Style.font.bodySmall
+          }
+
+          Text {
+            anchors.right: parent.right
+            visible: root.gpu !== null && root.gpu.watts !== null
+            text: root.gpu ? Format.watts(root.gpu.watts) : ""
+            color: Color.muted
+            font.family: Style.font.family
+            font.pixelSize: Style.font.bodySmall
+          }
+        }
+
+        // VRAM and temperature are read from independently-guarded sysfs files
+        // (lib/Gpu.js), so a card can report one without the other. The row
+        // stays up if either is known; each half is gated on its own value so
+        // neither can borrow the other's visibility.
+        Item {
+          width: parent.width
+          height: vramText.implicitHeight
+          visible: root.gpu !== null && (root.gpu.vramTotalMiB > 0 || root.gpu.tempC !== null)
+
+          Text {
+            id: vramText
+            anchors.left: parent.left
+            visible: root.gpu !== null && root.gpu.vramTotalMiB > 0
+            text: (root.gpu && root.gpu.vramTotalMiB > 0)
+              ? "VRAM " + Format.mib(root.gpu.vramUsedMiB) + " of " + Format.mib(root.gpu.vramTotalMiB)
+              : ""
+            color: Color.muted
+            font.family: Style.font.family
+            font.pixelSize: Style.font.caption
+          }
+
+          Text {
+            anchors.right: parent.right
+            visible: root.gpu !== null && root.gpu.tempC !== null
+            text: root.gpu && root.gpu.tempC !== null ? Format.celsius(root.gpu.tempC) : ""
+            color: Color.muted
+            font.family: Style.font.family
+            font.pixelSize: Style.font.caption
+          }
+        }
       }
     }
 
-    // Memory
+    // RAM
     Item {
       width: parent.width
       height: ramText.implicitHeight
       visible: root.mem.memTotal > 0
 
       Text {
+        anchors.left: parent.left
+        anchors.top: parent.top
+        width: root.nowLabelWidth
+        text: "RAM"
+        color: Color.muted
+        font.family: Style.font.family
+        font.pixelSize: Style.font.bodySmall
+      }
+
+      Text {
         id: ramText
         anchors.left: parent.left
+        anchors.leftMargin: root.nowLabelWidth
         text: root.mem.memTotal
           ? Format.bytes(root.mem.memTotal - root.mem.memAvailable) + " of "
             + Format.bytes(root.mem.memTotal)
@@ -219,23 +287,39 @@ Column {
       }
     }
 
-    // Storage
+    // Disk
     Item {
       width: parent.width
       height: diskText.implicitHeight
       visible: root.fullestFs !== null
 
-      // sizeKb/usedKb are 1024-blocks from df, hence bytes; usedPct-only is
-      // the fallback for a df variant that reported "-" for both (parseDf
+      Text {
+        anchors.left: parent.left
+        anchors.top: parent.top
+        width: root.nowLabelWidth
+        text: "Disk"
+        color: Color.muted
+        font.family: Style.font.family
+        font.pixelSize: Style.font.bodySmall
+      }
+
+      // usedKb/availKb are KiB from df (parseDf), so Format.bytes() needs the
+      // * 1024 below. Summing them, rather than dividing by sizeKb, matches
+      // df's own Capacity column (used / (used + available), excluding
+      // reserved blocks) — the same fraction lib/Pressure.js ranks the
+      // diskspace condition on, so this row and the overview's alertDisk
+      // reading can't disagree about how full the disk is. The usedPct-only
+      // fallback covers a df variant that reported "-" for both (parseDf
       // stores 0 rather than NaN in that case), so 0 KB never renders as a
       // real "0 B of 0 B".
       Text {
         id: diskText
         anchors.left: parent.left
+        anchors.leftMargin: root.nowLabelWidth
         text: root.fullestFs
-          ? (root.fullestFs.sizeKb > 0
+          ? ((root.fullestFs.usedKb + root.fullestFs.availKb) > 0
               ? Format.bytes(root.fullestFs.usedKb * 1024) + " of "
-                + Format.bytes(root.fullestFs.sizeKb * 1024) + " on " + root.fullestFs.mount
+                + Format.bytes((root.fullestFs.usedKb + root.fullestFs.availKb) * 1024) + " on " + root.fullestFs.mount
               : root.fullestFs.usedPct + "% full on " + root.fullestFs.mount)
           : ""
         color: Color.foreground
@@ -274,8 +358,10 @@ Column {
       }
 
       // A heading is a weak affordance, so this half of it is styled as a
-      // control: tinted, underlined on hover, with a pointing cursor. It has
-      // to look clickable without costing the panel a row of pills.
+      // control: tinted, underlined on hover, with a pointing cursor. The
+      // handlers live on the token itself, not the heading row, so the
+      // pointing hand and the underline never spread onto the prose beside
+      // it or the empty space past it.
       Text {
         id: sortToken
         anchors.left: usingLabel.right
@@ -284,14 +370,14 @@ Column {
         font.family: Style.font.family
         font.pixelSize: Style.font.caption
         font.underline: sortHover.hovered
-      }
 
-      HoverHandler {
-        id: sortHover
-        cursorShape: Qt.PointingHandCursor
-      }
+        HoverHandler {
+          id: sortHover
+          cursorShape: Qt.PointingHandCursor
+        }
 
-      TapHandler { onTapped: root.cycleSort() }
+        TapHandler { onTapped: root.cycleSort() }
+      }
     }
 
     Text {
