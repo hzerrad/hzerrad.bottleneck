@@ -63,10 +63,6 @@ Item {
   // Held here rather than on the panel because the service is keepLoaded, so
   // the choice survives the panel closing and reopening. Never written to disk.
   property string overviewDensity: "summary"   // summary | all
-  property var physicalCores: []          // [{coreId, kind, threads}]
-  property var coreStats: []              // [{coreId, kind, busyPct, tempC}]
-  property var coreTempMap: ({})          // coreId -> hwmon input filename
-  property string coreTempDir: ""
   property var memInfo: ({})              // raw byte counts for absolute display
   property var procs: []                  // top processes by cpu/mem
   property var gpuProcs: []               // per-process GPU from nvidia-smi pmon
@@ -119,22 +115,7 @@ Item {
           if (f.length === 2) freqs.push({ cpu: parseInt(f[0], 10), khz: parseInt(f[1], 10) })
         }
         root.coreClasses = Proc.classifyCores(freqs)
-        topoProc.running = true
         tick.start()
-      }
-    }
-  }
-
-  // A hyperthread pair shares one core and one sensor, so fold threads back.
-  Process {
-    id: topoProc
-    command: ["sh", "-c",
-      "for c in /sys/devices/system/cpu/cpu[0-9]*/topology/core_id; do " +
-      "n=${c#/sys/devices/system/cpu/cpu}; n=${n%%/*}; echo \"$n $(cat $c)\"; done"]
-    stdout: StdioCollector {
-      onStreamFinished: {
-        var topo = Proc.parseCoreTopology(text)
-        root.physicalCores = Proc.groupPhysicalCores(topo, root.coreClasses)
       }
     }
   }
@@ -169,8 +150,6 @@ Item {
         }
         var pick = Proc.pickCoretempInput(labels)
         if (dir && pick) tempFile.path = dir + "/" + pick
-        root.coreTempDir = dir
-        root.coreTempMap = Proc.parseCoretempMap(labels)
       }
     }
   }
@@ -340,7 +319,6 @@ Item {
       procProc.running = true
       if (root.constraintMetric === "cpu" || root.constraintMetric === "mem")
         constraintProcProc.running = true
-      if (root.coreTempDir !== "") coreTempProc.running = true
       if (root.gpuBackend === "nvidia") gpuProcProc.running = true
     }
   }
@@ -413,51 +391,6 @@ Item {
         root.gpuProcs = list.slice(0, 8)
       }
     }
-  }
-
-  // One spawn reads every core sensor, rather than one FileView per core.
-  Process {
-    id: coreTempProc
-    command: ["sh", "-c", root.coreTempCommand]
-    stdout: StdioCollector {
-      onStreamFinished: {
-        var m = {}
-        var lines = String(text).trim().split("\n")
-        for (var i = 0; i < lines.length; i++) {
-          var f = lines[i].trim().split(/\s+/)
-          if (f.length !== 2) continue
-          var c = parseInt(f[0], 10)
-          var t = Proc.parseMilliC(f[1])
-          if (!isNaN(c) && t !== null) m[c] = t
-        }
-        root.coreTemps = m
-      }
-    }
-  }
-
-  property var coreTemps: ({})
-  readonly property string coreTempCommand: {
-    if (coreTempDir === "") return "true"
-    var parts = []
-    for (var id in coreTempMap) parts.push("echo \"" + id + " $(cat " + coreTempDir + "/" + coreTempMap[id] + ")\"")
-    return parts.length ? parts.join("; ") : "true"
-  }
-
-  function refreshCoreStats(prev, curr) {
-    if (!physicalCores.length) return
-    var out = []
-    for (var i = 0; i < physicalCores.length; i++) {
-      var c = physicalCores[i]
-      out.push({
-        coreId: c.coreId,
-        name: c.name,
-        threads: c.threads.length,
-        kind: c.kind,
-        busyPct: prev ? Proc.cpuBusyPct(prev, curr, c.threads) : 0,
-        tempC: coreTemps[c.coreId] !== undefined ? coreTemps[c.coreId] : null
-      })
-    }
-    coreStats = out
   }
 
   function pushHistory(key, value) {
@@ -544,7 +477,6 @@ Item {
     prevPressures = Pressure.pressureByKey(resources)
 
     memInfo = mem
-    if (panelOpen) refreshCoreStats(prevStat, stat)
 
     for (var j = 0; j < resources.length; j++) pushHistory(resources[j].key, resources[j].pressure)
 
