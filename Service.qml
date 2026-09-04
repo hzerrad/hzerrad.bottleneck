@@ -155,9 +155,9 @@ Item {
   }
 
   // Identity is fixed for the boot, so this runs once rather than on the tick.
-  // 4 KB covers the first processor block on any machine; /proc/cpuinfo repeats
-  // every field per logical CPU and there are twenty of them on a mid-range
-  // desktop.
+  // 4 KB covers the first processor block on any machine: "model name" is a
+  // fixed early field within that block, so a higher thread count makes
+  // /proc/cpuinfo longer without pushing the field we want any later.
   Process {
     id: cpuModelProc
     running: true
@@ -275,7 +275,6 @@ Item {
       at: Date.now(),
       key: resource.key,
       label: resource.label,
-      glyph: resource.glyph,
       display: resource.display,
       culprit: ""
     }
@@ -317,7 +316,12 @@ Item {
     triggeredOnStart: true
     onTriggered: {
       procProc.running = true
-      if (root.constraintMetric === "cpu" || root.constraintMetric === "mem")
+      // When procSortOverride is "" (the default, and what the panel returns
+      // to on close), effectiveProcSort already mirrors constraintMetric, so
+      // procProc above builds the identical ps command constraintProcProc
+      // would — spawning both would sample the same thing twice.
+      if (root.procSortOverride !== "" &&
+          (root.constraintMetric === "cpu" || root.constraintMetric === "mem"))
         constraintProcProc.running = true
       if (root.gpuBackend === "nvidia") gpuProcProc.running = true
     }
@@ -367,9 +371,15 @@ Item {
     }
   }
 
+  // In the default state (no override) effectiveProcSort already mirrors
+  // constraintMetric, so procs — sampled by procProc every tick regardless —
+  // already holds the constraint's own attribution; reaching for
+  // constraintProcs there would be reading a list detailTick no longer keeps
+  // populated. Only a real override sends this to the separately-sorted list.
   readonly property var attributionList:
     (constraintMetric === "gpusm" || constraintMetric === "gpumem")
-      ? gpuProcs : constraintProcs
+      ? gpuProcs
+      : (procSortOverride === "" ? procs : constraintProcs)
 
   readonly property string attributionKey: {
     switch (constraintMetric) {
