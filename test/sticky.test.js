@@ -18,7 +18,11 @@ test("mergeSticky does not report growth when nothing is new", () => {
 })
 
 // The whole point of the module: rows already stuck stay stuck even once
-// they drop out of the eligible set, so the list never flickers.
+// they drop out of the eligible set, so the list never flickers. This is
+// also what "expanding must never show less" relies on in Overview.qml's
+// expandedRows — a condition whose anomaly has since cleared is still
+// shown there because it is still in stickyKeys, not because it is still
+// anomalous.
 test("mergeSticky keeps previously-sticky keys even when they drop out of eligible", () => {
   const r = Sticky.mergeSticky({ ram: true, swap: true }, ["ram"])
   assert.deepEqual(r.keys, { ram: true, swap: true })

@@ -95,13 +95,18 @@ Column {
 
   readonly property bool expanded: svc && svc.overviewDensity === "all"
 
-  // Expanding must never show less: an anomalous condition already on
-  // screen in summary (it is always eligible, see eligibleKeys) would
-  // otherwise vanish here, since contended alone excludes conditions.
+  // Expanding must never show less. A condition qualifies here if it is
+  // sticky (already on screen in summary, possibly because its anomaly
+  // has since cleared — stickyKeys is grow-only) or currently anomalous
+  // (so a fresh anomaly need not wait for a sample to appear on expand).
+  // svc.isAnomalous alone is not enough: it is live, while summaryRows is
+  // driven by the grow-only stickyKeys, so the two disagree the moment an
+  // anomaly clears.
   readonly property var expandedRows: {
     var out = contended.slice()
     for (var i = 0; i < conditions.length; i++) {
-      if (svc && svc.isAnomalous(conditions[i].key)) out.push(conditions[i])
+      var c = conditions[i]
+      if (root.stickyKeys[c.key] || (svc && svc.isAnomalous(c.key))) out.push(c)
     }
     return out
   }
