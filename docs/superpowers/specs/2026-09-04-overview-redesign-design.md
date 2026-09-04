@@ -185,8 +185,11 @@ takes a risk. Everything around it stays plain so the sentence carries.
 <attribution clause>, <trend> for <duration>
 ```
 
-`duration` is how long this resource has been the constraint — `svc.since`,
-already tracked.
+This shape is the non-alarm form. `duration` is how long the *constraint* has
+held its position — `svc.since`, already tracked — and it never appears on the
+alarm row below: an alarm can start on a resource that has been sitting well
+under the constraint for hours, and `since` measures the constraint's tenure,
+not the alarm's, so borrowing it there would be a fabricated claim.
 
 `trend` reads the constraint's last 30 history samples (about a minute at the
 default interval) and compares the mean of the newer 15 against the mean of the
@@ -237,8 +240,8 @@ construction rather than by fallback.
 | named, memory | `Chrome is holding your RAM` | `about 60% of what's in use` |
 | named, GPU | `blender is driving your GPU` | `about 80% of GPU time` |
 | diffuse | `P-cores are busy across 20 processes` | `no single cause` |
-| not attributable | `Disk I/O is saturated` | `sustained for 2m10s` |
-| anomaly | `Your root disk is nearly full` | `92% of 930 GB used` |
+| not attributable | `Disk I/O is your tightest resource` | `steady for 2m10s` |
+| alarm | `Your CPU is running hot` | `at 91°C` |
 | idle | `Nothing is holding you back` | `P-cores are closest, at 12%` |
 
 The two collapsed sentences beneath the rule:
