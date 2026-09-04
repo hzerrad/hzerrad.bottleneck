@@ -33,10 +33,6 @@ Panel {
   readonly property var svc: bar && bar.shell ? bar.shell.serviceFor("hzerrad.bottleneck") : null
   readonly property var gpu: svc ? svc.gpuSample : null
 
-  function toneFor(key) {
-    return (svc && svc.isAnomalous(key)) ? Color.urgent : Color.foreground
-  }
-
   function switchPanel(direction) {
     if (root.bar && typeof root.bar.switchPanelFrom === "function")
       return root.bar.switchPanelFrom(root.barIdentity, direction)
