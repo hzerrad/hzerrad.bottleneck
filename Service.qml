@@ -4,6 +4,7 @@ import Quickshell.Io
 import "lib/Proc.js" as Proc
 import "lib/Gpu.js" as Gpu
 import "lib/Pressure.js" as Pressure
+import "lib/Theme.js" as Theme
 
 // One sampler for the plugin. keepLoaded mounts it at shell startup and
 // survives the widget being hidden, so history stays continuous.
@@ -32,6 +33,9 @@ Item {
   property string gpuBackend: "none"
   property bool notifications: false
   property var notifiedKeys: ({})
+  property var themePalette: ({})
+  readonly property string themePath:
+    Quickshell.env("HOME") + "/.local/state/omarchy/current/theme/colors.toml"
 
   readonly property int historyLen: 120
 
@@ -57,6 +61,21 @@ Item {
   FileView { id: memFile;   path: "/proc/meminfo" }
   FileView { id: diskFile;  path: "/proc/diskstats" }
   FileView { id: tempFile;  path: "" }
+
+  // The shell's own Color.colorsFile sets watchChanges: false and depends on a
+  // theme switch pushing its payload over shell IPC, which plugins never
+  // receive. Watching the file is what makes a theme switch recolour us live.
+  FileView {
+    id: themeFile
+    path: root.themePath
+    watchChanges: true
+    printErrors: false
+    // text() is stale inside the change signal, so both paths route through
+    // reload() -> onLoaded and always parse fresh content.
+    onFileChanged: reload()
+    onLoaded: root.themePalette = Theme.parsePalette(text())
+    onLoadFailed: root.themePalette = ({})
+  }
 
   Component.onCompleted: discoverTopology()
 
@@ -202,6 +221,18 @@ Item {
         root.gpuSample = root.gpuBackend === "intel" ? Gpu.intelSample(kv) : Gpu.amdSample(kv)
       }
     }
+  }
+
+  function isAnomalous(key) {
+    for (var i = 0; i < anomalies.length; i++) if (anomalies[i].key === key) return true
+    return false
+  }
+
+  // One rule, two jobs: the band decides both colour and summary inclusion.
+  function bandOf(resource) {
+    if (!resource) return "calm"
+    return Theme.bandFor(resource.pressure * 100, calmThreshold,
+                         isAnomalous(resource.key), resource.ranks)
   }
 
   // One notification per anomaly onset, not per sample. The key clears when
