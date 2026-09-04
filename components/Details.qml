@@ -86,13 +86,11 @@ Column {
   Column {
     width: parent.width
     spacing: Style.space(4)
-
-    Text {
-      text: "Now"
-      color: Color.muted
-      font.family: Style.font.family
-      font.pixelSize: Style.font.caption
-    }
+    // No heading: the CPU/GPU/RAM/Disk gutter labels already say what this
+    // zone holds, so a label above them would only restate every row. That
+    // heading's line used to be this zone's separation from Overview above
+    // it too, so a top pad stands in for the space it left behind.
+    topPadding: Style.space(8)
 
     // CPU
     Item {
@@ -339,7 +337,7 @@ Column {
     }
   }
 
-  // ------------------------------------------------------- Using it now
+  // -------------------------------------------------------- Top processes
   Column {
     width: parent.width
     spacing: Style.space(4)
@@ -351,14 +349,16 @@ Column {
       Text {
         id: usingLabel
         anchors.left: parent.left
-        text: "Using it now, "
-        color: Color.muted
+        text: "Top processes ordered "
+        color: Color.foreground
         font.family: Style.font.family
         font.pixelSize: Style.font.caption
       }
 
-      // A heading is a weak affordance, so this half of it is styled as a
-      // control: tinted, underlined on hover, with a pointing cursor. The
+      // "Ordered" is what tells a reader the token beside it is a sort
+      // control rather than a qualifier — "Using it now, by cpu" never
+      // signalled that "by cpu" was interactive. It's styled as a control
+      // too: tinted, underlined on hover, with a pointing cursor. The
       // handlers live on the token itself, not the heading row, so the
       // pointing hand and the underline never spread onto the prose beside
       // it or the empty space past it.
@@ -427,14 +427,14 @@ Column {
     }
   }
 
-  // ----------------------------------------------------------- Recently
+  // ------------------------------------------------------- Recent spikes
   Column {
     width: parent.width
     spacing: Style.space(4)
 
     Text {
-      text: "Recently"
-      color: Color.muted
+      text: "Recent spikes"
+      color: Color.foreground
       font.family: Style.font.family
       font.pixelSize: Style.font.caption
     }

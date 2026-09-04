@@ -29,7 +29,6 @@ in the order a person actually asks the questions.
 Chrome is pinning your P-cores
 about 90% of the CPU in use, climbing for 16s          50%
 ──────────────────────────────────────────────────────────
-Now
   CPU    Core i9-11900K                            46°C
          P-cores ████████░░░░  50%   E-cores ░░  2%
   GPU    RTX 4070 Ti                               42 W
@@ -37,11 +36,11 @@ Now
   RAM    12.6 of 31.1 GB              swap 0 of 62.3 GB
   Disk   130 of 930 GB on /                    3 others
 
-Using it now, by cpu
+Top processes ordered by cpu
   chrome            38% cpu                       2.1 GB
   code              12% cpu                       1.4 GB
 
-Recently
+Recent spikes
   4m ago   P-cores hit 84%
            chrome 210%, code 46%
   22m ago  Disk I/O hit 97%
@@ -88,10 +87,10 @@ Rows show name, the leading metric, and the secondary metric right-aligned.
 The leading metric is whichever the zone is sorted by, so the columns swap when
 the sort does.
 
-**The override.** The heading reads `Using it now, by cpu`, where `by cpu` is an
-interactive token — accent-tinted, underlined on hover, with a pointing cursor —
-not prose. Clicking it cycles the sort through `cpu → mem → gpu → cpu`, skipping
-`gpu` when `gpuBackend` is `"none"`.
+**The override.** The heading reads `Top processes ordered by cpu`, where `by cpu`
+is an interactive token — accent-tinted, underlined on hover, with a pointing
+cursor — not prose. Clicking it cycles the sort through `cpu → mem → gpu → cpu`,
+skipping `gpu` when `gpuBackend` is `"none"`.
 
 Discoverability is the known weakness of a heading-as-control, accepted
 deliberately over a row of pills. Styling the token as interactive rather than
