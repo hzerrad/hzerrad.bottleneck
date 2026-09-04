@@ -48,8 +48,11 @@ The shell's `Color` singleton exposes five tokens (`foreground`, `background`,
 stock theme `accent` and `foreground` are the same value.
 
 `lib/Theme.js` parses the active theme's `colors.toml` for named hues. The file
-is flat `key = "#rrggbb"` pairs; anything that is not a plain hex string is
-skipped rather than guessed at.
+is flat `key = "#rrggbb"` pairs, most of them carrying a trailing `# comment` —
+shipped themes annotate nearly every colour, so a parser that anchors the value
+to end-of-line finds almost nothing. Anything whose value is not a plain hex
+string is skipped rather than guessed at, which keeps `mode = "dark"` and the
+`rgba(...) ... 45deg` border gradients out of the palette.
 
 ```
 ~/.local/state/omarchy/current/theme/colors.toml
