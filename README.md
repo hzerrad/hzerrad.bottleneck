@@ -21,6 +21,26 @@ of the ranking rather than reported as 0%.
 
 Left-click opens the panel. Right-click runs `detailCommand`.
 
+## Full details
+
+Left-click the widget, then **Full details**, for three zones:
+
+- **Now** — what each resource actually is and where it stands: the CPU and
+  GPU by name, memory as used-of-total rather than a percentage — a
+  percentage is a ratio, and deciding whether another VM fits needs the
+  numerator — and disk as the percentage full of the fullest filesystem.
+- **Using it now** — the processes responsible, ranked by whatever is currently
+  constraining the machine. Click `by cpu` in the heading to rank by memory or
+  GPU time instead; it returns to following the constraint when the panel
+  closes.
+- **Recently** — what has crossed `spikeThreshold` lately, and which processes
+  were running at that moment. This is recorded whether or not the panel is
+  open, so it catches what you missed.
+
+The GPU is named only where the driver reports it, which today means NVIDIA.
+AMD and Intel show the driver and VRAM size instead — deriving a marketing name
+means parsing a hardware database that may not be installed, for a string.
+
 ## Settings
 
 Set in `shell.json`, or with `omarchy bar set hzerrad.bottleneck <key> <value>`.
@@ -49,7 +69,7 @@ measurement; VRAM is absent unless the card exposes it. With no backend, GPU
 and VRAM stay out of the ranking.
 
 Per-process GPU attribution in the panel comes from `nvidia-smi pmon`, which
-has no sysfs equivalent, so that column stays NVIDIA-only.
+has no sysfs equivalent, so GPU time in Using it now is NVIDIA-only.
 
 Only the NVIDIA path has run on real hardware. AMD and Intel are implemented
 and unit-tested against captured sysfs output, but no one has yet run either on
@@ -97,7 +117,8 @@ installed. The rest:
 |---|---|---|
 | `sh`, `cat` | reading sysfs in a single spawn per tick | always |
 | `df` | filesystem usage | always |
-| `ps` | top processes and spike attribution | only while the panel is open |
+| `ps` | top processes in Using it now | only while the panel is open |
+| `ps` | spike attribution | whenever a spike is recorded, panel open or not |
 | `nvidia-smi` | NVIDIA telemetry and per-process GPU | NVIDIA cards only |
 | `omarchy-notification-send` | anomaly notifications | only when `notifications` is on |
 | `btop` | default right-click target, changeable via `detailCommand` | optional |
